@@ -49,3 +49,17 @@ Plan: [The template system](docs/design/20261029_01_TEMPLATE_SYSTEM_PLAN.md)
   `UrlResolver`; head constructs live in a `head` scope.
 - Placing named children, `template=` and named Markdown fragments are
   removed.
+
+## 2026-10-29 22:37 EDT — the template system plan: definitions as objects with types as values
+
+Plan: [The template system](docs/design/20261029_01_TEMPLATE_SYSTEM_PLAN.md)
+(Draft, amended).
+
+- A `[Template]`'s head is its type; every member is a field whose
+  right-hand side (or sigil) is its type; `name?: Type` is optional;
+  `name` is the field an instance's head fills; every object is the
+  body. Instances are the same format with values.
+- `[Content]` takes `- |` blocks; `- [Content] |` is refused with a
+  hint, leaving literal blocks on tagged rows to a later libtypedmd change.
+- Steps 1 to 3 build on libtypedmd 0.2.0; 0.2.1 is needed only for slots
+  in `[Content]` text.
