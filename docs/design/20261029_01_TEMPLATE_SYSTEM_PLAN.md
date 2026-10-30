@@ -1,7 +1,7 @@
 ---
 title: "The template system: typedmd graphs expanded by registered constructs into an inspectable tree, then collapsed into HTML"
 date: 2026-10-29
-status: Draft
+status: In implementation
 covers:
   - "The crate `libtypedtmpl` at the repository root: values and records
     read from typedmd objects; fragments as fenced `html` payloads with
@@ -1409,3 +1409,12 @@ Step 2's tests on types use this item's forms: each kind of field type,
 optional fields by `?`, `name` typed and untyped, nested property sets
 for defined types, each refusal and its hint, `- |` under `[Content]`
 and `- [Content] |` refused.
+
+## Amendment — 2026-10-29 22:42 EDT: Implementation started
+
+Implementation starts with step 1, in the commit that adds this
+amendment, and the status above is changed from `Draft` to
+`In implementation`. This document, as amended up to here, is now
+frozen (Rule 1.5): it changes only on the owner's explicit instruction,
+and departures needed to make it work are recorded in `CHANGES.md`
+(Rule 1.7).
