@@ -34,3 +34,18 @@ Plan: [The template system](docs/design/20261029_01_TEMPLATE_SYSTEM_PLAN.md)
   it, so a value is never read as Markdown.
 - `Value::Markdown` for `- name: |` fields, rendered when placed with no
   sigil; named Markdown fragments on rendered nodes.
+
+## 2026-10-29 22:16 EDT — the template system plan: reduction in document order, `[Content]`, defined types and value types
+
+Plan: [The template system](docs/design/20261029_01_TEMPLATE_SYSTEM_PLAN.md)
+(Draft, amended).
+
+- Objects reduce in document order; `[Content]` is the only object that
+  writes text, and wraps the objects after it with `{{ children }}`.
+- `[Template]` defines a type (`type: nav_link` defines `[NavLink]`)
+  with typed fields, optional fields and `head:`; a body places an
+  instance's children with `[Children]`.
+- Value types, with `[Url]` in the `html` module and a consumer's
+  `UrlResolver`; head constructs live in a `head` scope.
+- Placing named children, `template=` and named Markdown fragments are
+  removed.
