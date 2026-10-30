@@ -304,7 +304,8 @@ Before each code commit, the crate passes:
 
 1. `cargo fmt -p libtypedtmpl -- --check`;
 2. `cargo clippy -p libtypedtmpl --all-targets` with no new warnings;
-3. `cargo test -p libtypedtmpl`.
+3. `cargo test -p libtypedtmpl`, and `cargo test -p libtypedtmpl
+   --no-default-features` (without the `markdown` feature).
 
 ## Versions for Rule 5 (Rust)
 
