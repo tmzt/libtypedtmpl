@@ -70,7 +70,7 @@ source = "git+https://github.com/tmzt/libtypedmd?rev=a61c091e6420a1dfc40e89b8600
 
 [[package]]
 name = "libtypedtmpl"
-version = "0.0.0"
+version = "0.1.0"
 dependencies = [
  "comrak",
  "libtypedmd",
