@@ -67,7 +67,7 @@ impl Record {
     }
 }
 
-fn from_object_at(node: &Node, parent: &NodePath) -> Result<Record, Error> {
+pub(crate) fn from_object_at(node: &Node, parent: &NodePath) -> Result<Record, Error> {
     let path = parent.child(Segment::of(node));
     let shape = |message: String| Error::new(ErrorKind::RecordShape, message).at(path.clone());
     let NodeKind::Object(object) = &node.kind else {
@@ -168,7 +168,7 @@ fn member_value(node: &Node, parent: &NodePath) -> Result<Value, Error> {
 }
 
 /// A member's text read as its sigil's type.
-fn read_value(sigil: Option<Sigil>, text: &str) -> Result<Value, String> {
+pub(crate) fn read_value(sigil: Option<Sigil>, text: &str) -> Result<Value, String> {
     let t = text.trim();
     match sigil {
         None if text.contains('\n') => Ok(Value::Markdown(text.to_string())),

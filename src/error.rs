@@ -12,7 +12,7 @@ use crate::path::NodePath;
 pub struct Error {
     pub kind: ErrorKind,
     pub message: String,
-    /// From the expansion root down, such as `[Page] home > [List] posts > [Item] #3`.
+    /// From the expansion root down, such as `[Section] intro > [List] items > [Item] #3`.
     pub path: NodePath,
     /// The slot as written back by `Slot::render`, when a slot caused it.
     pub slot: Option<String>,
@@ -74,6 +74,49 @@ pub enum ErrorKind {
     UnknownField,
     /// A field asked of a value that is not a record.
     NotARecord,
+    /// A slot in content that cannot be read: unclosed, or empty.
+    SlotSyntax,
+    /// A value whose type does not agree with the slot's sigil, or with a
+    /// field's type.
+    SigilMismatch,
+    /// A `[1.]` slot in content: lists are drawn by `[List]`.
+    ListSlot,
+    /// A slot whose alias is not in scope.
+    UnknownAlias,
+    /// A node with nothing to output.
+    NothingToDraw,
+    /// A node where it does not belong: a plain row, an unreadable span.
+    StrayNode,
+    /// A `[Content]` that is not Markdown or one `html` block.
+    ContentShape,
+    /// More than one `html` block in a `[Content]`.
+    TwoFragments,
+    /// A placeholder Markdown rendering did not keep exactly once.
+    SlotLost,
+    /// Markdown content without the `markdown` feature.
+    MarkdownDisabled,
+    /// A `[List]` without its `source`, `item_alias` or `[Item]`.
+    ListShape,
+    /// An `[Item]` or `[Empty]` that is not a body.
+    ArmShape,
+    /// A construct outside the place it belongs (`[Item]` outside a list).
+    Misplaced,
+    /// A list source no one defines.
+    UnknownSource,
+    /// A list source that is not a list.
+    NotAList,
+    /// A tag that is neither a construct nor a defined type.
+    UnknownType,
+    /// A `[Template]` that is not a valid definition.
+    BadDefinition,
+    /// Two templates for one type.
+    DuplicateTemplate,
+    /// A type whose body instantiates itself.
+    TemplateCycle,
+    /// An instance missing a required field.
+    MissingField,
+    /// An instance given children its type does not place.
+    ChildrenNotPlaced,
     /// A consumer's construct, source or collapse.
     Consumer,
 }
