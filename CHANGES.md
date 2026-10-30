@@ -85,3 +85,15 @@ Plan: [The template system](docs/design/20261029_01_TEMPLATE_SYSTEM_PLAN.md)
 - **Prose in a record's object is a note**, following the amendment that
   makes prose outside `[Content]` a note, rather than section 3.2's error
   for Leaf children; a plain list row stays an error.
+
+## 2026-10-29 22:46 EDT — libtypedmd stays at 0.2.0
+
+Plan: [The template system](docs/design/20261029_01_TEMPLATE_SYSTEM_PLAN.md)
+(In implementation).
+
+On the owner's instruction, libtypedmd's slot text plan (0.2.1) is on
+hold and this crate's pin stays on the commit tagged `v0.2.0`. The
+plan's move to 0.2.1 "in the commit that first replaces slots in
+`[Content]` text" does not happen while that plan is on hold; how step 2
+reads slots in `[Content]` text without `libtypedmd::slots::parse_text`
+is settled with the owner before step 2 relies on it.
