@@ -139,3 +139,20 @@ Plan: [The template system](docs/design/20261029_01_TEMPLATE_SYSTEM_PLAN.md)
   objects (what a consumer calls for a section's body); instantiation is
   reached through `Expander::expand`, not a public `instance`;
   `Expanded::children` and `Scope::root` are added.
+
+## 2026-10-29 23:04 EDT — the template system plan, step 3: departures
+
+Plan: [The template system](docs/design/20261029_01_TEMPLATE_SYSTEM_PLAN.md)
+(In implementation). Small departures (Rule 1.7):
+
+- **An attribute value with no sigil is text.** An element's attribute
+  from a construct (`rel="stylesheet"`) is written as `[abc]` would
+  write it; only an `Html` value stays unsigiled there, and is refused.
+  Section 5.2's table is for slot values; it gave attributes no rule.
+- **`render_html` reduces the node itself**, through `Expander::expand`,
+  as the plan says. A consumer drawing a section's body (its child
+  objects) calls `Expander::expand_children` and then `collapse`; the
+  tests show both.
+- **Element names and attribute names are written as given.** The
+  constructs that make elements (step 4) choose them; the writer does not
+  check them.
