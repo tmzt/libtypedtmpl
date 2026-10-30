@@ -97,3 +97,16 @@ plan's move to 0.2.1 "in the commit that first replaces slots in
 `[Content]` text" does not happen while that plan is on hold; how step 2
 reads slots in `[Content]` text without `libtypedmd::slots::parse_text`
 is settled with the owner before step 2 relies on it.
+
+## 2026-10-29 22:49 EDT — the template system plan: slots in content read by this crate
+
+Plan: [The template system](docs/design/20261029_01_TEMPLATE_SYSTEM_PLAN.md)
+(In implementation, amended on the owner's instruction).
+
+- Slots in rows come parsed from libtypedmd 0.2.0; slots in content
+  (paragraphs, `- |` blocks, `html` bodies, all verbatim in the graph)
+  are read by a private reader following SPEC.md §3.2's rules, building
+  libtypedmd's own `Slot` values with the consumer's alias table.
+- The dependency stays at the commit tagged `v0.2.0` for the whole plan;
+  libtypedmd's slot text plan is not needed. This settles the open point
+  in the entry "libtypedmd stays at 0.2.0".
