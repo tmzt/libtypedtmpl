@@ -110,3 +110,32 @@ Plan: [The template system](docs/design/20261029_01_TEMPLATE_SYSTEM_PLAN.md)
 - The dependency stays at the commit tagged `v0.2.0` for the whole plan;
   libtypedmd's slot text plan is not needed. This settles the open point
   in the entry "libtypedmd stays at 0.2.0".
+
+## 2026-10-29 23:01 EDT — the template system plan, step 2: departures
+
+Plan: [The template system](docs/design/20261029_01_TEMPLATE_SYSTEM_PLAN.md)
+(In implementation). Small departures (Rule 1.7):
+
+- **A placed block takes its paragraph's place.** The amendment "Markdown
+  content by default" (item 3, step 4) drops the `<p>` around a child
+  placed alone in a paragraph. The same is done for any unsigiled slot
+  placed alone (an `Html` or `Markdown` value such as a rendered body),
+  which would otherwise be a block inside a `<p>`.
+- **An instance's children are reduced before its body,** in the caller's
+  scope, and `[Children]` places the already reduced nodes; the result is
+  the plan's (children see the caller's aliases, the body does not).
+- **Error kinds as built.** Step 2 adds `SlotSyntax`, `SigilMismatch`,
+  `ListSlot`, `UnknownAlias`, `NothingToDraw`, `StrayNode`,
+  `ContentShape`, `TwoFragments`, `SlotLost`, `MarkdownDisabled`,
+  `ListShape`, `ArmShape`, `Misplaced`, `UnknownSource`, `NotAList`,
+  `UnknownType`, `BadDefinition`, `DuplicateTemplate`, `TemplateCycle`,
+  `MissingField` and `ChildrenNotPlaced`, in place of section 4.7's
+  placement and template kinds, which the later amendments removed.
+- **Named field types wait for step 4.** A field typed by a name that is
+  not a core type is a defined type when a template defines it; value
+  types (`Url`) arrive with step 4, so until then such a field is an
+  `UnknownType` error when an instance sets it.
+- **API as built.** `Expander::expand_children` reduces a node's child
+  objects (what a consumer calls for a section's body); instantiation is
+  reached through `Expander::expand`, not a public `instance`;
+  `Expanded::children` and `Scope::root` are added.
