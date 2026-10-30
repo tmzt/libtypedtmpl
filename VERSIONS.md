@@ -30,3 +30,14 @@ version commit.
   `AssetUrls`, `AssetKind`, `AsWritten`, `UrlResolver`, `AsGiven`,
   `Url` and `head_key`.
 - **`markdown`** (feature, on by default): `markdown::render`.
+
+## 0.1.1 — 2026-10-29 (`e0e9c62`, tag `v0.1.1`)
+
+A fix, with no change to the public API.
+
+- **Fixed:** wrapping now nests. A `[Content]` holding `{{ children }}`
+  among the objects another one wraps wraps the objects after it, and an
+  instance's children are wrapped like any other siblings. In 0.1.0 the
+  wrapped objects were reduced one by one, so a document shell around a
+  `<main>{{ children }}</main>` produced an empty `<main>`. The plan
+  already says both; the output now matches it.
