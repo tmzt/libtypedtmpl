@@ -19,3 +19,18 @@ Plan: [The template system](docs/design/20261029_01_TEMPLATE_SYSTEM_PLAN.md)
 - An `html` module of head constructs (`[Meta]`, `[Title]`,
   `[Stylesheet]`, `[Script]`, `[Icon]`, `[Link]`), with `AssetUrls`
   for a consumer's naming conventions and `head_key` for merging.
+
+## 2026-10-29 22:00 EDT — the template system plan: Markdown content by default
+
+Plan: [The template system](docs/design/20261029_01_TEMPLATE_SYSTEM_PLAN.md)
+(Draft, amended).
+
+- A rendered node's content is Markdown (its paragraphs and `- |` blocks)
+  by default, rendered with comrak behind a default `markdown` feature;
+  a fenced `html` block stays the raw form.
+- Slots are applied by the object that renders; `slots=false` turns them
+  off, and text in data is never replaced.
+- Slots become placeholders before Markdown rendering and values after
+  it, so a value is never read as Markdown.
+- `Value::Markdown` for `- name: |` fields, rendered when placed with no
+  sigil; named Markdown fragments on rendered nodes.
