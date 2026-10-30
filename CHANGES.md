@@ -63,3 +63,25 @@ Plan: [The template system](docs/design/20261029_01_TEMPLATE_SYSTEM_PLAN.md)
   hint, leaving literal blocks on tagged rows to a later libtypedmd change.
 - Steps 1 to 3 build on libtypedmd 0.2.0; 0.2.1 is needed only for slots
   in `[Content]` text.
+
+## 2026-10-29 22:42 EDT — the template system plan, step 1: departures
+
+Plan: [The template system](docs/design/20261029_01_TEMPLATE_SYSTEM_PLAN.md)
+(In implementation from step 1). Small departures (Rule 1.7):
+
+- **Markdown fields are told by their line breaks.** libtypedmd 0.2 gives a
+  `- caption: |` member the block's text as its right-hand side and keeps
+  no mark that it was a block, so `Record::from_object` reads a member
+  with no sigil whose value spans more than one line as `Value::Markdown`.
+  A one-line `|` block reads as `Text`. An explicit `[abc]` keeps a
+  multi-line value as `Text`.
+- **`Record` keeps its name as a value** (boxed, since `Value` holds
+  records), so `get("name")` can return `Option<&Value>` as section 3.1
+  gives it.
+- **`ErrorKind` grows with the steps.** Step 1 has the kinds it raises
+  (`BadValue`, `NoValue`, `SlotInData`, `RecordShape`, `NotAPath`,
+  `UnknownField`, `NotARecord`) and `Consumer`; the enum is
+  `#[non_exhaustive]`, and the later steps add theirs.
+- **Prose in a record's object is a note**, following the amendment that
+  makes prose outside `[Content]` a note, rather than section 3.2's error
+  for Leaf children; a plain list row stays an error.
