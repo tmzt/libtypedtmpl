@@ -1418,3 +1418,85 @@ amendment, and the status above is changed from `Draft` to
 frozen (Rule 1.5): it changes only on the owner's explicit instruction,
 and departures needed to make it work are recorded in `CHANGES.md`
 (Rule 1.7).
+
+## Amendment — 2026-10-29 22:49 EDT: slots in content are read by this crate, on libtypedmd 0.2.0
+
+On the owner's explicit instruction (2026-10-29; this plan is in
+implementation, Rule 1.5). Where this amendment and the text above
+disagree, this amendment wins. It replaces section 3.3's second
+paragraph (a block "read with `libtypedmd::slots::parse_text`"); item 3
+of the amendment "definitions as objects with types as values …" (the
+move to the commit tagged `v0.2.1`); section 2's `rev` of "the commit
+tagged v0.2.1"; and, in the amendment "Markdown content by default",
+item 3's first step where it relies on that reader. libtypedmd's slot
+text plan, which would have provided it, is on hold.
+
+### 1. Where slots come from
+
+- **Rows.** libtypedmd parses slots in heads, inline property values and
+  member right-hand sides into `Text`s of literal and `Slot` parts
+  (SPEC.md §3.2). This crate takes those `Slot`s from the graph as they
+  are: an instance's fields, a `[List]`'s `source`, a head entry's
+  properties.
+- **Content.** Paragraphs, `- |` blocks and `html` block bodies reach the
+  graph verbatim: SPEC.md §3.2 and §5 say slots are not recognised in
+  them, and resolution is the consumer's everywhere (Part II §4). Reading
+  slots in that text is this crate's reading of its own content, done by
+  the reader below. Content slots and row slots are the same
+  `libtypedmd::Slot` type and are resolved by the same code.
+
+### 2. The content slot reader
+
+A private module, `slots`:
+
+```rust
+pub(crate) enum Piece {
+    Literal(String),
+    Slot { slot: libtypedmd::Slot, line: usize, column: usize }, // 1-based, within the piece of content
+}
+
+/// Split content text into literal text and slots.
+pub(crate) fn read(text: &str, aliases: &libtypedmd::AliasTable) -> Result<Vec<Piece>, Error>;
+```
+
+It follows SPEC.md §3.2's rules for slots in rows:
+
+- `{{` opens a slot, closed by the first `}}` on the same line. A slot
+  never spans lines and never nests.
+- The text between them is trimmed. If it begins with a bracketed token
+  followed by whitespace or its end, and
+  `AliasTable::resolve_sigil(token)` resolves it, the slot is typed
+  (`Slot::typed`) and the rest, trimmed, is its expression. Otherwise
+  (no token, or a token that is not a sigil, such as `[Tag]`) the whole
+  text is the expression (`Slot::new`), as in rows.
+- `\{{` is a literal `{{`.
+- An unclosed `{{`, one with no `}}` before the end of its line, is an
+  `ErrorKind::SlotSyntax` error naming the line and column within the
+  paragraph, block or `html` body; so is an empty slot, `{{ }}`.
+- Errors that a slot causes write it back with `Slot::render`.
+- A `[Content]` with `slots=false` is not read: its text is written as
+  it stands, `\{{` included.
+
+The alias table is the consumer's, given to the `Expander`
+(`Expander::with_aliases`, an empty table by default), the same one it
+parses its documents with, so a sigil spelling resolves the same way in
+rows and in content.
+
+### 3. The dependency stays at libtypedmd 0.2.0
+
+`Cargo.toml` pins libtypedmd to the commit tagged `v0.2.0` for the whole
+plan; every public item used here (`Slot::new`, `Slot::typed`,
+`Slot::render`, `AliasTable::resolve_sigil`, the model, `parse_with`)
+exists in 0.2.0. This crate does not need libtypedmd's slot text plan. If
+that plan returns and publishes `slots::parse_text`, adopting it is a
+later amendment's choice, not a requirement.
+
+### 4. Tests (adds to step 2)
+
+`tests/slots.rs`: text with no slots; typed and untyped slots; each of
+the seven sigils; an aliased sigil; a non-sigil `[Tag]` kept in the
+expression; `\{{`; several slots on a line and on several lines; an
+unclosed `{{` with its line and column; a `}}` only on the next line
+(unclosed); an empty slot; a slot inside a Markdown link destination
+reaching the placeholder step intact; and `slots=false` leaving text as
+written.
