@@ -117,6 +117,15 @@ pub enum ErrorKind {
     MissingField,
     /// An instance given children its type does not place.
     ChildrenNotPlaced,
+    /// A link whose scheme is refused (`javascript:`, `data:`, `vbscript:`).
+    RefusedScheme,
+    /// A value where escaping cannot make it safe: an unquoted attribute,
+    /// inside a tag, a comment, a script or a style.
+    UnsafePosition,
+    /// The writer failed.
+    Write,
+    /// A void element (`link`, `meta`, `img`, …) given children.
+    VoidChildren,
     /// A consumer's construct, source or collapse.
     Consumer,
 }

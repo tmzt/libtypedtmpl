@@ -56,6 +56,7 @@ fn an_item_keeps_every_value_and_its_nested_list_in_order() {
             Part::Literal(_) => "literal",
             Part::Value { .. } => "value",
             Part::Child(_) => "child",
+            Part::Element(_) => "element",
         })
         .collect();
     assert_eq!(

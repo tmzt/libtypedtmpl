@@ -37,6 +37,88 @@ pub enum Part {
         slot: Slot,
     },
     Child(Expanded),
+    /// An element a construct produced, with typed attributes.
+    Element(Element),
+}
+
+/// An element: a tag, typed attributes in the order written, and children.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Element {
+    pub name: String,
+    pub attrs: Vec<Attr>,
+    pub children: Vec<Part>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Attr {
+    pub name: String,
+    pub value: AttrValue,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum AttrValue {
+    /// Escaped and checked by the collapse, like a slot's value.
+    Value { sigil: Option<Sigil>, value: Value },
+    /// A boolean attribute, written as its name.
+    Flag,
+}
+
+impl Element {
+    pub fn new(name: impl Into<String>) -> Self {
+        Self {
+            name: name.into(),
+            attrs: Vec::new(),
+            children: Vec::new(),
+        }
+    }
+
+    pub fn attr(mut self, name: impl Into<String>, sigil: Option<Sigil>, value: Value) -> Self {
+        self.attrs.push(Attr {
+            name: name.into(),
+            value: AttrValue::Value { sigil, value },
+        });
+        self
+    }
+
+    pub fn flag(mut self, name: impl Into<String>) -> Self {
+        self.attrs.push(Attr {
+            name: name.into(),
+            value: AttrValue::Flag,
+        });
+        self
+    }
+
+    fn write_outline(&self, f: &mut fmt::Formatter<'_>, pad: &str) -> fmt::Result {
+        let mut head = format!("<{}", self.name);
+        for attr in &self.attrs {
+            match &attr.value {
+                AttrValue::Flag => head.push_str(&format!(" {}", attr.name)),
+                AttrValue::Value { value, .. } => {
+                    head.push_str(&format!(" {}={}", attr.name, outline_value(value)))
+                }
+            }
+        }
+        writeln!(f, "{pad}{head}>")?;
+        let inner = format!("{pad}  ");
+        for part in &self.children {
+            write_part(part, f, &inner)?;
+        }
+        Ok(())
+    }
+}
+
+fn write_part(part: &Part, f: &mut fmt::Formatter<'_>, pad: &str) -> fmt::Result {
+    match part {
+        Part::Literal(text) => writeln!(f, "{pad}\"{}\"", quote(text)),
+        Part::Value { sigil, value, .. } => {
+            let label = sigil
+                .map(|s| format!("[{}]", s.token()))
+                .unwrap_or_else(|| "html".into());
+            writeln!(f, "{pad}{label} {}", outline_value(value))
+        }
+        Part::Child(child) => child.write_outline(f, pad.len() / 2),
+        Part::Element(element) => element.write_outline(f, pad),
+    }
 }
 
 impl Expanded {
@@ -95,17 +177,9 @@ impl Expanded {
             head.push_str(&format!(" {alias}={shown}"));
         }
         writeln!(f, "{pad}{head}")?;
+        let inner = format!("{pad}  ");
         for part in &self.parts {
-            match part {
-                Part::Literal(text) => writeln!(f, "{pad}  \"{}\"", quote(text))?,
-                Part::Value { sigil, value, .. } => {
-                    let label = sigil
-                        .map(|s| format!("[{}]", s.token()))
-                        .unwrap_or_else(|| "html".into());
-                    writeln!(f, "{pad}  {label} {}", outline_value(value))?
-                }
-                Part::Child(child) => child.write_outline(f, depth + 1)?,
-            }
+            write_part(part, f, &inner)?;
         }
         Ok(())
     }

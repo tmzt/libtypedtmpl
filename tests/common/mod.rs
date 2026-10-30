@@ -91,6 +91,7 @@ pub fn text(e: &Expanded) -> String {
                 other => out.push_str(&format!("{other:?}")),
             },
             Part::Child(c) => out.push_str(&text(c)),
+            Part::Element(e) => out.push_str(&format!("<{}>", e.name)),
         }
     }
     out
