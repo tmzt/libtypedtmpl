@@ -518,13 +518,21 @@ impl<'a> Expander<'a> {
                 }
             }
         }
+        self.expand_sequence(&objects, scope)
+    }
+
+    /// Reduce sibling objects in order. A `[Content]` holding
+    /// `{{ children }}` wraps the objects after it, which are reduced the
+    /// same way, so wrapping nests.
+    fn expand_sequence(
+        &mut self,
+        objects: &[&Node],
+        scope: &Scope<'_>,
+    ) -> Result<Vec<Expanded>, Error> {
         let mut out = Vec::new();
         for (i, child) in objects.iter().enumerate() {
             if tag(child) == "Content" && crate::content::wraps(child, &self.aliases)? {
-                let mut wrapped = Vec::new();
-                for following in &objects[i + 1..] {
-                    wrapped.extend(self.expand(following, scope)?);
-                }
+                let wrapped = self.expand_sequence(&objects[i + 1..], scope)?;
                 let content = self.within(child, None, |cx| {
                     crate::content::reduce(child, scope, cx, Some(wrapped))
                 })?;
@@ -694,10 +702,7 @@ impl<'a> Expander<'a> {
                 ),
             ));
         }
-        let mut reduced = Vec::new();
-        for child in children {
-            reduced.extend(self.expand(child, scope)?);
-        }
+        let reduced = self.expand_sequence(&children, scope)?;
 
         let mut body_scope = scope.root().child();
         body_scope.bind("this", Value::Record(this.clone()));
