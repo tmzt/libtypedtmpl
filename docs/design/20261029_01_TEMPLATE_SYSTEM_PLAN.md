@@ -859,3 +859,169 @@ HTML of section 5.4, `v0.1.0` is tagged on the version commit, and
 7. **Sibling-aware constructs.** Section 5.6: if the later conditional
    plan wants highbay's sibling `[Case]`/`[Else]` without a parent, is a
    change to `reduce` (and so a minor version) acceptable then?
+
+## Amendment — 2026-10-29 21:46 EDT: elements, a writer passed to `Collapse`, `HtmlWriter`, and HTML head constructs
+
+Agreed with the owner on 2026-10-29. Where this amendment and the text
+above disagree, this amendment wins.
+
+### A. Element nodes in the expanded tree (adds to section 4.1)
+
+Constructs may produce elements, not only fragment text, so that a
+consumer's collapse receives structure (a tag and typed attributes) rather
+than a string of HTML. `Part` gains a variant:
+
+```rust
+pub enum Part {
+    Literal(String),
+    Value { sigil: Option<Sigil>, value: Value, slot: Slot },
+    Child(Expanded),
+    Element(Element),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Element {
+    pub name: String,              // "link", "meta", "script", …
+    pub attrs: Vec<Attr>,          // in the order written
+    pub children: Vec<Part>,       // e.g. a <title>'s text
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Attr { pub name: String, pub value: AttrValue }
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum AttrValue {
+    Value { sigil: Option<Sigil>, value: Value }, // escaped and checked by the collapse
+    Flag,                                         // a boolean attribute: written as its name
+}
+```
+
+`Display` writes an element as `<name attr=value …>` on its own line,
+its children indented below it.
+
+### B. `Collapse` takes its writer on every call (replaces section 5.1)
+
+```rust
+pub trait Collapse {
+    type Writer: ?Sized;
+    fn enter(&mut self, node: &Expanded, out: &mut Self::Writer) -> Result<(), Error>;
+    fn literal(&mut self, text: &str, out: &mut Self::Writer) -> Result<(), Error>;
+    fn value(&mut self, sigil: Option<Sigil>, value: &Value, out: &mut Self::Writer) -> Result<(), Error>;
+    fn start_element(&mut self, element: &Element, out: &mut Self::Writer) -> Result<(), Error>;
+    fn end_element(&mut self, element: &Element, out: &mut Self::Writer) -> Result<(), Error>;
+    fn leave(&mut self, node: &Expanded, out: &mut Self::Writer) -> Result<(), Error>;
+}
+
+/// Walk `trees` in order: enter, each part (literal, value, element with
+/// its children, or a child walked the same way), leave.
+pub fn collapse<C: Collapse>(trees: &[Expanded], collapse: &mut C, out: &mut C::Writer) -> Result<(), Error>;
+```
+
+`Output` and `finish` are removed: the output is whatever the writer
+holds. The walk still fills in the node path and slot of an error, as
+section 5.1 says.
+
+### C. `HtmlWriter` (adds to section 5.2)
+
+```rust
+/// Writes HTML. Text and attribute values are escaped here; raw is not.
+pub trait HtmlWriter {
+    fn start(&mut self, name: &str, attrs: &[(&str, Option<&str>)]) -> Result<(), Error>; // None: a flag
+    fn end(&mut self, name: &str) -> Result<(), Error>;   // nothing for a void element
+    fn text(&mut self, text: &str) -> Result<(), Error>;  // escaped
+    fn raw(&mut self, html: &str) -> Result<(), Error>;   // as is
+}
+impl HtmlWriter for String { … }
+pub struct IoHtmlWriter<W: std::io::Write>(pub W);
+impl<W: std::io::Write> HtmlWriter for IoHtmlWriter<W> { … }  // io errors become ErrorKind::Write
+```
+
+- Escaping in `text` and attribute values is section 5.2's: `& < > " '`.
+- Void elements (`area base br col embed hr img input link meta source
+  track wbr`) get no end tag; `end` writes nothing for them, and a void
+  element with children is an `ErrorKind::VoidChildren` error.
+- `ErrorKind` gains `Write` and `VoidChildren` (it is not exhaustive).
+
+`HtmlCollapse` (section 5.2) keeps everything it decides, the position
+state machine, checking a value against its sigil, refused link schemes
+and the date formatter, and writes through the writer:
+`impl Collapse for HtmlCollapse { type Writer = dyn HtmlWriter; }`.
+
+- `literal` advances the position state and calls `out.raw`.
+- `value` checks the position, then writes text through `out.text` (the
+  writer escapes) or an `Html` value through `out.raw`.
+- `start_element` requires the position to be text (otherwise
+  `UnsafePosition`), checks each attribute value as `value` would (a
+  `[-]` value's scheme, the sigil), formats dates, and calls
+  `out.start`; `end_element` calls `out.end`. An element's children
+  are walked between them; the position state treats `<script>` and
+  `<style>` elements as it treats them in literal text.
+
+`render_html` becomes
+`render_html(node, scope, cx, html: &mut HtmlCollapse, out: &mut dyn HtmlWriter) -> Result<(), Error>`.
+
+### D. The `html` module: head constructs (new)
+
+A module `html` holds constructs for elements of an HTML `<head>`. They
+are general HTML vocabulary; a consumer registers them with
+`html::register(&mut Registry, urls: Rc<dyn AssetUrls>)`.
+
+```rust
+/// Turns a name written in a construct into a URL. A consumer applies its
+/// conventions here (a bare name to a folder and extension); the default
+/// returns the name unchanged.
+pub trait AssetUrls {
+    fn url(&self, kind: AssetKind, name: &str) -> Result<String, String>;
+}
+pub enum AssetKind { Stylesheet, Script, Icon, Link }
+pub struct AsWritten; // impl AssetUrls: the name as written
+```
+
+Each construct reads its head and inline properties; a property's value
+is a bare token, a quoted string or a slot (resolved in scope), `true` is
+a flag and `false` omits the attribute.
+
+| Construct | Example | Reduces to |
+| --- | --- | --- |
+| `[Meta]` | `[Meta] charset=utf-8`; `[Meta] viewport content="width=device-width"`; `[Meta] description content={{ [abc] x.description }}` | `<meta charset>`, or `<meta name="<head>" content>`; any other properties as attributes. A `[Meta]` whose `content` is empty is dropped (no element). |
+| `[Title]` | `[Title] {{ [abc] x.title }}` | `<title>` with the head as its text |
+| `[Stylesheet]` | `[Stylesheet] main` | `<link rel="stylesheet" href="<url>">` |
+| `[Script]` | `[Script] app defer=true type=module` | `<script src="<url>" …></script>` |
+| `[Icon]` | `[Icon] icon.png sizes=512x512` | `<link rel="icon" href="<url>" …>` |
+| `[Link]` | `[Link] /humans.txt rel=author` | `<link href="<url>" …>` with its properties |
+
+`<url>` is `AssetUrls::url` of the head; its error is an
+`ErrorKind::Asset` error at the construct's path. A construct's head may
+be a slot. Also exported, for consumers that merge lists of head entries:
+
+```rust
+/// The identity of a head entry for merging: "meta:charset",
+/// "meta:<name>", "title", or "<kind>:<url>" for the others; None for any
+/// other node.
+pub fn head_key(node: &Node, urls: &dyn AssetUrls) -> Option<String>;
+```
+
+The agnosticism test (step 2) applies to this module too; its docs use
+neutral words.
+
+### E. Steps (replaces section 6's step 3 and step 4)
+
+- **Step 3: Collapse, the writer and HTML.** `collapse.rs`, `html.rs`
+  (`HtmlCollapse`) and `writer.rs` (`HtmlWriter`, the `String` and
+  `IoHtmlWriter` implementations), with element parts added to
+  `expand.rs`. Tests: section 5.2's cases through a `String` writer;
+  elements with text, flag and value attributes; attribute escaping;
+  void elements and `VoidChildren`; an element in an unsafe position;
+  `IoHtmlWriter` into a `Vec<u8>` matching the `String` writer; an
+  io error becoming `Write`; the recording `Collapse`, now with
+  element calls. **Done when:** `cargo test -p libtypedtmpl` passes with
+  every case above.
+- **Step 4: Head constructs.** `html/head.rs`: section D. Tests: each
+  construct's element and attributes; flags and `false`; a slot head and
+  a slot property; an empty `content` dropping its `[Meta]`; a test
+  `AssetUrls` applying a convention and one returning an error;
+  `head_key` for each construct. **Done when:** `cargo test -p
+  libtypedtmpl` passes with every case above.
+- **Step 5: Docs, example and 0.1.0**: the old step 4, unchanged, with
+  the crate docs and the example also showing a head built from the
+  constructs.
