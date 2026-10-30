@@ -1025,3 +1025,112 @@ neutral words.
 - **Step 5: Docs, example and 0.1.0**: the old step 4, unchanged, with
   the crate docs and the example also showing a head built from the
   constructs.
+
+## Amendment — 2026-10-29 22:00 EDT: Markdown content by default; slots applied by the object that renders
+
+Agreed with the owner on 2026-10-29. Where this amendment and the text
+above disagree, this amendment wins. HTML stays the output; what changes
+is how a node's content is written.
+
+### 1. A node's content (replaces section 3.3's first paragraph, and section 4.4's first sentence and its Leaf bullet)
+
+A node with no registered construct is **rendered** from its content,
+which is one of:
+
+- **Markdown, the default:** its paragraph Leaves and its literal Leaves
+  (`- |` blocks), in document order, joined with a blank line between
+  pieces. Markdown with structure (headings, lists, tables) goes in a
+  `- |` block, because at node level libtypedmd would read a `##` as a
+  heading Object and a `-` list as rows.
+- **Raw HTML, the explicit form:** its fenced `html` block, as section 3.3
+  describes, for content that is HTML by nature (a document shell).
+
+A node with both is an error; with neither, `NothingToDraw`. Typed
+notation inside content is not interpreted: libtypedmd already reads
+paragraphs and literal blocks verbatim. A plain list-row Leaf (a member
+written without its colon, most often) and a Fallback stay errors.
+Section 7's question 4 is settled for prose: prose is content. Data
+objects under a rendered node stay errors.
+
+"Rendered" means expanded by this fragment rule. Which of a consumer's
+tags are rendered (its pages, layouts, list arms) and which are settings
+or data (bound as records, never rendered) is the consumer's choice;
+`[Template]`, `[Item]` and `[Empty]` are always rendered.
+
+### 2. Slots are applied by the object that renders (adds to section 3.3)
+
+The fragment rule applies slots in the content it renders, Markdown or
+HTML, as section 3.3 describes. A member `slots=false` on the node turns
+that off: its content is rendered as written and `{{` stays literal.
+`slots` is therefore a reserved member name of rendered nodes. A
+consumer's construct decides for itself whether to apply slots in content
+it reads. Text in data is never replaced by this crate.
+
+### 3. Rendering Markdown (new; feature `markdown`, on by default)
+
+```toml
+[features]
+default = ["markdown"]
+markdown = ["dep:comrak"]
+
+[dependencies]
+comrak = { version = "0.59", default-features = false, optional = true }
+```
+
+Rendering happens in expansion, so the expanded tree keeps its shape
+(literals, values, children) and the collapse is unchanged:
+
+1. Each slot in the Markdown is replaced by a placeholder
+   `ltt<nonce>s<n>z`: ASCII letters and digits only, so comrak keeps it
+   intact in text and in link destinations; `<nonce>` is 8 hex digits
+   chosen so that the text contains no `ltt<nonce>`.
+2. comrak renders with GFM tables, strikethrough, autolinks and task
+   lists, footnotes, heading IDs (empty prefix) and raw HTML passed
+   through.
+3. The HTML is split at the placeholders into `Part::Literal` and each
+   slot's `Part::Value` or `Part::Child`. A placeholder that does not
+   appear exactly once in the output is an `ErrorKind::SlotLost` error
+   naming the slot (`\{{` writes a literal `{{`).
+4. A child placed alone in a paragraph (`<p>` placeholder `</p>`) takes
+   the paragraph's place: the `<p>` and `</p>` are dropped, so a placed
+   list of figures is not wrapped in a paragraph.
+
+A value is therefore never read as Markdown: a `*` in a title stays a
+`*`, escaped by the collapse as before.
+
+`markdown::render(text: &str) -> String` renders Markdown with the same
+options and no slots, for a consumer's own Markdown files.
+
+Without the feature, Markdown content is an `ErrorKind::MarkdownDisabled`
+error and only `html` blocks render.
+
+### 4. Markdown fields and named Markdown fragments (adds to sections 3.1 to 3.3)
+
+- `Value` gains `Markdown(String)`: `Record::from_object` reads a member
+  whose value is a literal block (`- caption: |`) as `Markdown`. Slots in
+  it are not applied (it is data).
+- `{{ [abc] x.caption }}` on `Markdown` writes its source as text,
+  escaped; `{{ x.caption }}` with no sigil renders it (section 3) and
+  places the HTML. Without the feature, the second is
+  `MarkdownDisabled`.
+- On a rendered node, a member whose value is a literal block is a named
+  Markdown fragment, placed with `{{ name }}` and rendered with slots
+  applied, like the node's content. A single unsigiled name now resolves
+  to a named child Object, then such a member, then a `[Template]`, then
+  an `Html` or `Markdown` value in scope.
+
+### 5. Steps (adds to section 6)
+
+- Gates (adds to Rule 3.4's commands in `AGENTS.md`, in its own commit):
+  `cargo test -p libtypedtmpl --no-default-features` as well.
+- Step 2 adds `content.rs` and `markdown.rs`. Tests: paragraphs and
+  `- |` blocks in order; typed notation inside them left alone; an `html`
+  block and Markdown together; a row Leaf; `slots=false`; a `*` in a
+  value not read as Markdown; a slot in a link destination; a child
+  alone in a paragraph unwrapped; a table and a footnote; `SlotLost`;
+  `Markdown` fields with and without a sigil; named Markdown fragments;
+  the lookup order; and, without the feature, `MarkdownDisabled`.
+- Section 5.4's example is written with Markdown content around the
+  gallery; the `phone` template stays an `html` block. In a consumer, a
+  template such as `phone` belongs to that consumer's own definition, not
+  to this crate.
