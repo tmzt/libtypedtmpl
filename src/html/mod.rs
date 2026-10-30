@@ -7,6 +7,10 @@
 //! checks each value against its sigil, refuses unsafe link schemes, and
 //! formats dates.
 
+mod head;
+
+pub use head::{head_key, register, AsGiven, AsWritten, AssetKind, AssetUrls, Url, UrlResolver};
+
 use libtypedmd::{Node, Sigil};
 
 use crate::collapse::{collapse, Collapse};
@@ -187,7 +191,7 @@ fn attr_sigil(sigil: Option<Sigil>, value: &Value) -> Option<Sigil> {
 /// A link, refused if its scheme is `javascript:`, `data:` or `vbscript:`
 /// (compared without case, after trimming, and with tab, newline and
 /// carriage return removed, as browsers do).
-fn checked_link(link: &str) -> Result<String, Error> {
+pub(crate) fn checked_link(link: &str) -> Result<String, Error> {
     let squeezed: String = link
         .trim()
         .chars()

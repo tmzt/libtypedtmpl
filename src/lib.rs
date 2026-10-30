@@ -28,6 +28,7 @@ pub use collapse::{collapse, Collapse};
 pub use error::{Error, ErrorKind};
 pub use expand::{
     Attr, AttrValue, Construct, Element, Expanded, Expander, NoSources, Part, Registry, Sources,
+    ValueType,
 };
 pub use html::{render_html, HtmlCollapse};
 pub use path::{NodePath, Segment, SlotPath};

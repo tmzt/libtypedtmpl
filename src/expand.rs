@@ -228,6 +228,18 @@ pub trait Construct {
 /// Constructs by tag.
 pub struct Registry {
     constructs: HashMap<String, Box<dyn Construct>>,
+    /// Constructs that apply only inside a named scope, such as `head`.
+    scoped: HashMap<String, HashMap<String, Box<dyn Construct>>>,
+    value_types: HashMap<String, Box<dyn ValueType>>,
+}
+
+/// A type a field may have that is read from text, such as `Url`. It
+/// checks and normalises the text into one of the core values.
+pub trait ValueType {
+    /// The type's name, as a definition writes it: `Url`.
+    fn name(&self) -> &str;
+    /// Read a field's value: its text, or a slot's value written as text.
+    fn read(&self, text: &str, at: &NodePath) -> Result<Value, String>;
 }
 
 impl Default for Registry {
@@ -261,6 +273,8 @@ impl Registry {
     pub fn empty() -> Self {
         Self {
             constructs: HashMap::new(),
+            scoped: HashMap::new(),
+            value_types: HashMap::new(),
         }
     }
 
@@ -272,6 +286,41 @@ impl Registry {
 
     pub fn get(&self, tag: &str) -> Option<&dyn Construct> {
         self.constructs.get(tag).map(|c| c.as_ref())
+    }
+
+    /// Register a construct that applies only inside the scope `scope`.
+    pub fn register_in(
+        &mut self,
+        scope: &str,
+        construct: Box<dyn Construct>,
+    ) -> Option<Box<dyn Construct>> {
+        self.scoped
+            .entry(scope.to_string())
+            .or_default()
+            .insert(construct.tag().to_string(), construct)
+    }
+
+    /// The construct for `tag` inside `scope` (falling back to the default
+    /// scope), or in the default scope when `scope` is `None`.
+    pub fn get_in(&self, scope: Option<&str>, tag: &str) -> Option<&dyn Construct> {
+        scope
+            .and_then(|s| self.scoped.get(s))
+            .and_then(|c| c.get(tag))
+            .map(|c| c.as_ref())
+            .or_else(|| self.get(tag))
+    }
+
+    /// Register a value type by its name, returning any it replaces.
+    pub fn register_value_type(
+        &mut self,
+        value_type: Box<dyn ValueType>,
+    ) -> Option<Box<dyn ValueType>> {
+        self.value_types
+            .insert(value_type.name().to_string(), value_type)
+    }
+
+    pub fn value_type(&self, name: &str) -> Option<&dyn ValueType> {
+        self.value_types.get(name).map(|v| v.as_ref())
     }
 }
 
@@ -302,6 +351,8 @@ pub struct Expander<'a> {
     children: Vec<Vec<Expanded>>,
     /// The types being instantiated, innermost last.
     types: Vec<String>,
+    /// The named construct scopes entered, innermost last.
+    scopes: Vec<String>,
 }
 
 impl<'a> Expander<'a> {
@@ -314,6 +365,7 @@ impl<'a> Expander<'a> {
             path: NodePath::new(),
             children: Vec::new(),
             types: Vec::new(),
+            scopes: Vec::new(),
         }
     }
 
@@ -359,6 +411,20 @@ impl<'a> Expander<'a> {
         result
     }
 
+    /// Run `f` with the named construct scope `name` entered: inside it,
+    /// constructs registered in that scope apply (the `html` module's head
+    /// constructs live in `head`).
+    pub fn with_scope<T>(
+        &mut self,
+        name: &str,
+        f: impl FnOnce(&mut Self) -> Result<T, Error>,
+    ) -> Result<T, Error> {
+        self.scopes.push(name.to_string());
+        let result = f(self);
+        self.scopes.pop();
+        result
+    }
+
     /// Reduce one object: its tag's construct, or an instance of the type
     /// its tag names.
     pub fn expand(&mut self, node: &Node, scope: &Scope<'_>) -> Result<Vec<Expanded>, Error> {
@@ -369,10 +435,23 @@ impl<'a> Expander<'a> {
         let templates = self.templates;
         self.within(node, None, |cx| {
             let t = tag(node);
-            if let Some(construct) = registry.get(t) {
+            let named = cx.scopes.last().map(String::as_str);
+            if let Some(construct) = registry.get_in(named, t) {
                 construct.reduce(node, scope, cx)
             } else if let Some(def) = templates.get(t) {
                 cx.instance(def, node, scope).map(|e| vec![e])
+            } else if registry.value_type(t).is_some() {
+                let head = node
+                    .as_object()
+                    .map(|o| o.head.render())
+                    .unwrap_or_default();
+                Err(cx.error(
+                    ErrorKind::UnknownType,
+                    format!(
+                        "`[{t}]` is a value type, a field's type: declare the field as `- {}: {t}`",
+                        head.trim()
+                    ),
+                ))
             } else {
                 Err(cx.error(
                     ErrorKind::UnknownType,
@@ -628,6 +707,20 @@ impl<'a> Expander<'a> {
                     FieldType::Core(sigil) => agree(*sigil, &value).map_err(|m| {
                         mismatch(format!("the field `{}`: {m}", field.name)).in_slot(slot)
                     })?,
+                    FieldType::Named(name) if self.registry.value_type(name).is_some() => {
+                        let text = value_text(&value).ok_or_else(|| {
+                            mismatch(format!(
+                                "the field `{}` is a `{name}`, but `{}` is {}",
+                                field.name,
+                                slot.expr,
+                                value.kind()
+                            ))
+                            .in_slot(slot)
+                        })?;
+                        return self
+                            .read_value_type(field, name, &text)
+                            .map_err(|e| e.in_slot(slot));
+                    }
                     FieldType::Named(name) => {
                         if self.templates.get(name).is_none() {
                             return Err(self.unknown_type(field, name));
@@ -667,10 +760,27 @@ impl<'a> Expander<'a> {
                                 field.name
                             ),
                         )),
+                    FieldType::Named(name) if self.registry.value_type(name).is_some() => {
+                        self.read_value_type(field, name, literal)
+                    }
                     FieldType::Named(name) => Err(self.unknown_type(field, name)),
                 }
             }
         }
+    }
+
+    /// Read a field of a value type from text.
+    fn read_value_type(&self, field: &FieldDef, name: &str, text: &str) -> Result<Value, Error> {
+        let value_type = self
+            .registry
+            .value_type(name)
+            .expect("checked by the caller");
+        value_type.read(text, &self.path).map_err(|m| {
+            self.error(
+                ErrorKind::BadValue,
+                format!("the field `{}`: {m}", field.name),
+            )
+        })
     }
 
     /// A field set by child rows: a nested instance of a defined type
@@ -761,6 +871,16 @@ impl<'a> Expander<'a> {
     /// The children of the innermost instance, for `[Children]`.
     fn instance_children(&self) -> Option<&Vec<Expanded>> {
         self.children.last()
+    }
+}
+
+/// A plain value as text, for a value type to read.
+fn value_text(value: &Value) -> Option<String> {
+    match value {
+        Value::Text(s) | Value::Number(s) | Value::Link(s) | Value::Currency(s) => Some(s.clone()),
+        Value::Date(d) => Some(d.to_string()),
+        Value::Bool(b) => Some(b.to_string()),
+        _ => None,
     }
 }
 
