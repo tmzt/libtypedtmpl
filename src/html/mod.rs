@@ -37,6 +37,8 @@ enum Position {
     Raw(String),
 }
 
+/// The HTML collapse: decides what may be written where, and writes
+/// through an [`HtmlWriter`].
 pub struct HtmlCollapse {
     position: Position,
     /// How `[31]` values are written.

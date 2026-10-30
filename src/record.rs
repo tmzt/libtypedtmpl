@@ -17,6 +17,7 @@ pub struct Record {
 }
 
 impl Record {
+    /// An empty record with this name.
     pub fn new(name: Option<String>) -> Self {
         Self {
             name_value: name.clone().map(|n| Box::new(Value::Text(n))),
@@ -25,6 +26,7 @@ impl Record {
         }
     }
 
+    /// The record's name: its object's head.
     pub fn name(&self) -> Option<&str> {
         self.name.as_deref()
     }
@@ -49,6 +51,7 @@ impl Record {
             })
     }
 
+    /// Every field, in order, including repeated names.
     pub fn fields(&self) -> &[(String, Value)] {
         &self.fields
     }

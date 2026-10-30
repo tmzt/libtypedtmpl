@@ -18,14 +18,20 @@ use crate::value::Value;
 /// Turns a name written in a head entry into a URL. A consumer applies its
 /// conventions here (a bare name to a folder and extension).
 pub trait AssetUrls {
+    /// The URL for a head entry's name, or why there is none.
     fn url(&self, kind: AssetKind, name: &str) -> Result<String, String>;
 }
 
+/// Which head entry a name is for.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AssetKind {
+    /// `[Stylesheet]`.
     Stylesheet,
+    /// `[Script]`.
     Script,
+    /// `[Icon]`.
     Icon,
+    /// `[Link]`.
     Link,
 }
 
@@ -52,6 +58,7 @@ impl AssetUrls for AsWritten {
 /// Resolves a URL given as a value. A consumer resolves its own relative
 /// URLs, and records references, here.
 pub trait UrlResolver {
+    /// The URL to write for `url`, declared at `at`, or why it is refused.
     fn resolve(&self, url: &str, at: &NodePath) -> Result<String, String>;
 }
 
@@ -71,6 +78,7 @@ pub struct Url {
 }
 
 impl Url {
+    /// A `Url` value type resolving through `resolver`.
     pub fn new(resolver: Rc<dyn UrlResolver>) -> Self {
         Self { resolver }
     }

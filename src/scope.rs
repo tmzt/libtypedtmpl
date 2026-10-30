@@ -15,6 +15,7 @@ pub struct Scope<'p> {
 }
 
 impl Scope<'static> {
+    /// An empty root frame, for the consumer's roots.
     pub fn new() -> Scope<'static> {
         Scope::default()
     }
@@ -30,6 +31,7 @@ impl<'p> Scope<'p> {
         }
     }
 
+    /// Bind `alias` to `value` in this frame.
     pub fn bind(&mut self, alias: impl Into<String>, value: Value) {
         self.bindings.push((alias.into(), value));
     }

@@ -14,7 +14,9 @@ pub struct NodePath(Vec<Segment>);
 /// One step of a [`NodePath`].
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Segment {
+    /// The node's tag.
     pub tag: Option<String>,
+    /// The node's head, or a member's name.
     pub name: Option<String>,
     /// 1-based, for a drawn list item.
     pub index: Option<usize>,
@@ -39,6 +41,7 @@ impl Segment {
         }
     }
 
+    /// This segment, as the `index`th drawn item (1-based).
     pub fn with_index(mut self, index: usize) -> Self {
         self.index = Some(index);
         self
@@ -61,22 +64,27 @@ impl fmt::Display for Segment {
 }
 
 impl NodePath {
+    /// An empty path: the expansion root.
     pub fn new() -> Self {
         Self::default()
     }
 
+    /// Whether the path has no segments.
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
     }
 
+    /// The segments, outermost first.
     pub fn segments(&self) -> &[Segment] {
         &self.0
     }
 
+    /// Add an innermost segment.
     pub fn push(&mut self, segment: Segment) {
         self.0.push(segment);
     }
 
+    /// Remove the innermost segment.
     pub fn pop(&mut self) -> Option<Segment> {
         self.0.pop()
     }
@@ -105,11 +113,14 @@ impl fmt::Display for NodePath {
 /// `[A-Za-z_][A-Za-z0-9_-]*`, no spaces.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SlotPath {
+    /// The first name: an alias in scope.
     pub alias: String,
+    /// The fields after it, in order.
     pub fields: Vec<String>,
 }
 
 impl SlotPath {
+    /// Read slot text as a path; a `NotAPath` error if it is not one.
     pub fn parse(text: &str) -> Result<Self, Error> {
         let not_a_path = || {
             Error::new(

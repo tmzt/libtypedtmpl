@@ -29,6 +29,7 @@ pub enum Value {
     Markdown(String),
     /// A source for `[List]`.
     List(Vec<Record>),
+    /// A record, such as an instance's `this`.
     Record(Record),
 }
 
@@ -56,14 +57,17 @@ impl Value {
 pub struct Html(String);
 
 impl Html {
+    /// Markup the caller vouches for.
     pub fn trusted(markup: impl Into<String>) -> Self {
         Self(markup.into())
     }
 
+    /// The markup.
     pub fn as_str(&self) -> &str {
         &self.0
     }
 
+    /// The markup, owned.
     pub fn into_string(self) -> String {
         self.0
     }
@@ -72,8 +76,11 @@ impl Html {
 /// A calendar day.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Date {
+    /// The year.
     pub year: i32,
+    /// The month, 1 to 12.
     pub month: u8,
+    /// The day of the month, from 1.
     pub day: u8,
 }
 

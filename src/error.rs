@@ -7,10 +7,13 @@ use libtypedmd::Slot;
 
 use crate::path::NodePath;
 
+/// An error from reading records, expanding or collapsing.
 #[derive(Debug, Clone, PartialEq)]
 #[non_exhaustive]
 pub struct Error {
+    /// What went wrong.
     pub kind: ErrorKind,
+    /// A sentence saying what went wrong, naming what caused it.
     pub message: String,
     /// From the expansion root down, such as `[Section] intro > [List] items > [Item] #3`.
     pub path: NodePath,
@@ -29,11 +32,13 @@ impl Error {
         }
     }
 
+    /// This error at `path`.
     pub fn at(mut self, path: NodePath) -> Self {
         self.path = path;
         self
     }
 
+    /// This error caused by `slot`, written back as it reads.
     pub fn in_slot(mut self, slot: &Slot) -> Self {
         self.slot = Some(slot.render());
         self

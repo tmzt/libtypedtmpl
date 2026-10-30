@@ -11,6 +11,7 @@ pub const VOID: &[&str] = &[
     "wbr",
 ];
 
+/// Whether `name` is a void element (case-insensitive).
 pub fn is_void(name: &str) -> bool {
     VOID.iter().any(|v| v.eq_ignore_ascii_case(name))
 }

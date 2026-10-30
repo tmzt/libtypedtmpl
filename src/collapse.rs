@@ -10,17 +10,24 @@ use crate::value::Value;
 /// Folds an expanded tree into output, through a writer passed on every
 /// call.
 pub trait Collapse {
+    /// The writer the output goes to: `dyn HtmlWriter` for HTML.
     type Writer: ?Sized;
+    /// A node begins.
     fn enter(&mut self, node: &Expanded, out: &mut Self::Writer) -> Result<(), Error>;
+    /// Literal markup or text from a fragment.
     fn literal(&mut self, text: &str, out: &mut Self::Writer) -> Result<(), Error>;
+    /// A slot's value, with the sigil it was written with.
     fn value(
         &mut self,
         sigil: Option<Sigil>,
         value: &Value,
         out: &mut Self::Writer,
     ) -> Result<(), Error>;
+    /// An element begins; its children follow.
     fn start_element(&mut self, element: &Element, out: &mut Self::Writer) -> Result<(), Error>;
+    /// An element ends.
     fn end_element(&mut self, element: &Element, out: &mut Self::Writer) -> Result<(), Error>;
+    /// A node ends.
     fn leave(&mut self, node: &Expanded, out: &mut Self::Writer) -> Result<(), Error>;
 }
 

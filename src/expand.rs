@@ -19,23 +19,34 @@ use crate::value::Value;
 /// what it holds, in output order. Nothing is flattened here.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Expanded {
+    /// Where the node came from, from the expansion root down.
     pub path: NodePath,
+    /// The source node's tag, such as `List` or `Content`.
     pub tag: Option<String>,
+    /// The source node's head, when plain and not empty.
     pub name: Option<String>,
     /// Aliases this node bound for its contents: an `[Item]`'s item alias,
     /// an instance's `this`.
     pub bindings: Vec<(String, Value)>,
+    /// What the node holds, in output order.
     pub parts: Vec<Part>,
 }
 
+/// One piece of an expanded node.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Part {
+    /// Markup or text from a fragment, written as it is.
     Literal(String),
+    /// A slot's value, resolved and checked against its sigil.
     Value {
+        /// The slot's sigil; `None` for HTML.
         sigil: Option<Sigil>,
+        /// The value.
         value: Value,
+        /// The slot it came from, for errors.
         slot: Slot,
     },
+    /// A child node, placed here.
     Child(Expanded),
     /// An element a construct produced, with typed attributes.
     Element(Element),
@@ -44,26 +55,39 @@ pub enum Part {
 /// An element: a tag, typed attributes in the order written, and children.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Element {
+    /// The element's tag, such as `link`.
     pub name: String,
+    /// Its attributes, in the order written.
     pub attrs: Vec<Attr>,
+    /// Its children: text, values and elements.
     pub children: Vec<Part>,
 }
 
+/// An element's attribute.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Attr {
+    /// The attribute's name.
     pub name: String,
+    /// Its value, or a flag.
     pub value: AttrValue,
 }
 
+/// An attribute's value.
 #[derive(Debug, Clone, PartialEq)]
 pub enum AttrValue {
     /// Escaped and checked by the collapse, like a slot's value.
-    Value { sigil: Option<Sigil>, value: Value },
+    Value {
+        /// The sigil it is written with; `None` is text, or HTML for `Html`.
+        sigil: Option<Sigil>,
+        /// The value.
+        value: Value,
+    },
     /// A boolean attribute, written as its name.
     Flag,
 }
 
 impl Element {
+    /// An element with no attributes or children.
     pub fn new(name: impl Into<String>) -> Self {
         Self {
             name: name.into(),
@@ -72,6 +96,7 @@ impl Element {
         }
     }
 
+    /// Add an attribute with a value.
     pub fn attr(mut self, name: impl Into<String>, sigil: Option<Sigil>, value: Value) -> Self {
         self.attrs.push(Attr {
             name: name.into(),
@@ -80,6 +105,7 @@ impl Element {
         self
     }
 
+    /// Add a boolean attribute, written as its name.
     pub fn flag(mut self, name: impl Into<String>) -> Self {
         self.attrs.push(Attr {
             name: name.into(),
@@ -284,6 +310,7 @@ impl Registry {
             .insert(construct.tag().to_string(), construct)
     }
 
+    /// The construct for `tag` in the default scope.
     pub fn get(&self, tag: &str) -> Option<&dyn Construct> {
         self.constructs.get(tag).map(|c| c.as_ref())
     }
@@ -319,6 +346,7 @@ impl Registry {
             .insert(value_type.name().to_string(), value_type)
     }
 
+    /// The value type named `name`.
     pub fn value_type(&self, name: &str) -> Option<&dyn ValueType> {
         self.value_types.get(name).map(|v| v.as_ref())
     }
@@ -356,6 +384,7 @@ pub struct Expander<'a> {
 }
 
 impl<'a> Expander<'a> {
+    /// An expander over these constructs, types and sources.
     pub fn new(registry: &'a Registry, templates: &'a Templates, sources: &'a dyn Sources) -> Self {
         Self {
             registry,
@@ -380,6 +409,7 @@ impl<'a> Expander<'a> {
         &self.aliases
     }
 
+    /// Where the walk is: the nodes being reduced, outermost first.
     pub fn path(&self) -> &NodePath {
         &self.path
     }

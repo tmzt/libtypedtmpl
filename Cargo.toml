@@ -3,6 +3,8 @@ name = "libtypedtmpl"
 version = "0.0.0"
 edition = "2021"
 publish = false
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/tmzt/libtypedtmpl"
 description = "A small template system over libtypedmd graphs: records, typed slots, constructs, and a collapse into HTML."
 
 [dependencies]

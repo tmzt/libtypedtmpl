@@ -42,13 +42,18 @@ pub struct TypeDef {
     pub(crate) node: Node,
 }
 
+/// A field of a defined type.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FieldDef {
+    /// The field's name, without the `?` that marks it optional.
     pub name: String,
+    /// Its type.
     pub kind: FieldType,
+    /// Whether an instance may leave it out.
     pub optional: bool,
 }
 
+/// A field's type.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum FieldType {
     /// A core type, by sigil or by name.
@@ -59,6 +64,7 @@ pub enum FieldType {
 }
 
 impl TypeDef {
+    /// The field named `name`.
     pub fn field(&self, name: &str) -> Option<&FieldDef> {
         self.fields.iter().find(|f| f.name == name)
     }
@@ -81,6 +87,7 @@ pub struct Templates {
 }
 
 impl Templates {
+    /// No types.
     pub fn new() -> Self {
         Self::default()
     }
@@ -116,6 +123,7 @@ impl Templates {
         self.types.iter().find(|t| t.key == key)
     }
 
+    /// Every type, in the order added.
     pub fn types(&self) -> &[TypeDef] {
         &self.types
     }
