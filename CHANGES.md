@@ -156,3 +156,27 @@ Plan: [The template system](docs/design/20261029_01_TEMPLATE_SYSTEM_PLAN.md)
 - **Element names and attribute names are written as given.** The
   constructs that make elements (step 4) choose them; the writer does not
   check them.
+
+## 2026-10-29 23:07 EDT — the template system plan, step 4: departures
+
+Plan: [The template system](docs/design/20261029_01_TEMPLATE_SYSTEM_PLAN.md)
+(In implementation). Small departures (Rule 1.7):
+
+- **`html::register` takes both hooks:**
+  `register(&mut Registry, Rc<dyn AssetUrls>, Rc<dyn UrlResolver>)`. The
+  plan gave it `AssetUrls` alone (amendment "elements, a writer…", D)
+  and said `Url` is registered by it (amendment "reduction in document
+  order…", 4); one call registers both.
+- **A named scope falls back to the default one.** Inside `head`, the
+  head constructs apply first and the default constructs (`[List]`,
+  `[Content]`) still apply; outside it, the head constructs do not.
+- **A head entry's head may mix literal text and slots** (`[Title]
+  {{ [abc] page.title }} — tmzt.dev`), joined as text; a `[Meta]` with no
+  head is keyed by its first property (`meta:charset`).
+- **A value type reads a slot's value through its text**: a `Url` field
+  set from `{{ [abc] x.home }}` reads the text `/`.
+- **Error kinds:** a name `AssetUrls` refuses is a `Consumer` error with
+  its message; a URL `Url` refuses (empty, a refused scheme, or the
+  resolver's error) is `BadValue` naming the field; a value type written
+  as an object is `UnknownType` with the hint `- name: Url`.
+- **`html` is a folder module** (`src/html/mod.rs`, `src/html/head.rs`).
