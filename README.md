@@ -22,3 +22,4 @@ libtypedmd is; the Cargo snippet arrives with the first release.
 
 | Document | Date | Status | Decision |
 |---|---|---|---|
+| [The template system: typedmd graphs expanded by registered constructs into an inspectable tree, then collapsed into HTML](docs/design/20261029_01_TEMPLATE_SYSTEM_PLAN.md) | 2026-10-29 | Draft | Fragments are `html` blocks with typedmd slots; `[List]`/`[Item]`/`[Empty]` and `[Template]` are constructs registered by tag; expansion yields a tree that keeps its structure, and a `Collapse` (HTML built in, with all escaping) is the only place it is flattened; 0.1.0 on libtypedmd 0.2.1; Draft, for the owner to review. |
