@@ -1,7 +1,7 @@
 ---
 title: "The template system: typedmd graphs expanded by registered constructs into an inspectable tree, then collapsed into HTML"
 date: 2026-10-29
-status: In implementation
+status: Implemented
 covers:
   - "The crate `libtypedtmpl` at the repository root: values and records
     read from typedmd objects; fragments as fenced `html` payloads with
@@ -1500,3 +1500,25 @@ unclosed `{{` with its line and column; a `}}` only on the next line
 (unclosed); an empty slot; a slot inside a Markdown link destination
 reaching the placeholder step intact; and `slots=false` leaving text as
 written.
+
+## Amendment — 2026-10-29 23:10 EDT: Implemented
+
+Every step is done and its **Done when:** holds; the status above is
+changed from `In implementation` to `Implemented`. The plan stays frozen.
+Departures are recorded in `CHANGES.md`, step by step.
+
+- **Step 1** (values, records, paths, errors): `1ec8cbc`, with the plan's
+  status change; departures `086db7a`.
+- **Step 2** (expansion: scope, registry, `[Content]` with the content
+  slot reader and Markdown, wrapping, `[List]`, defined types): `3a76b4b`;
+  the gate without the `markdown` feature in `AGENTS.md`, `ba0e9ec`;
+  departures `c678404`.
+- **Step 3** (`Collapse` with its writer, `HtmlWriter`, `HtmlCollapse`,
+  element parts): `c40ac3e`; departures `74bb0bd`.
+- **Step 4** (value types with `Url`, head constructs in the `head`
+  scope): `e5f0087`; departures `aeef5f1`.
+- **Step 5** (docs, example and 0.1.0): the licences `d67b1c0` (and
+  `25df04d`, settling section 7's question 1); docs on every public item,
+  the crate docs with a doctest, and `examples/gallery.rs`, `cd9cffb`; the
+  README's usage `7b00606`; version 0.1.0 with its `VERSIONS.md` entry,
+  `3e21b33`, tagged `v0.1.0`.
