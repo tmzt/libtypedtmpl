@@ -1134,3 +1134,183 @@ error and only `html` blocks render.
   gallery; the `phone` template stays an `html` block. In a consumer, a
   template such as `phone` belongs to that consumer's own definition, not
   to this crate.
+
+## Amendment — 2026-10-29 22:16 EDT: reduction in document order, `[Content]`, defined types and value types
+
+Agreed with the owner on 2026-10-29. Where this amendment and the text
+above disagree, this amendment wins. It replaces section 4.4 (the
+fragment rule and placement) and section 4.6 (templates) entirely;
+section 3.3's rows for an unsigiled single name; section 4.5's rule that
+an arm has `template=` or its own block; and items 1 and 4 of the
+amendment "Markdown content by default" (a node's paragraphs and literal
+leaves as its content; named Markdown fragments). That amendment's
+Markdown rendering (its item 3), `Value::Markdown` and the reserved
+`slots` member stay, the last now on `[Content]`.
+
+### 1. Reduction in document order
+
+Expanding a node reduces its child objects in document order, and its
+output is their reductions in that order. Members are never output: they
+are a node's settings, or an instance's fields (item 3). Prose
+paragraphs and `- |` blocks directly under a node are notes, not output;
+only `[Content]` writes text. A plain list-row Leaf and a Fallback are
+errors.
+
+A child object reduces by, in order: a construct registered for its tag
+in the current scope (item 5); a defined type for its tag (item 3);
+otherwise it is an `ErrorKind::UnknownType` error naming the tag.
+
+### 2. `[Content]`
+
+`[Content]` is a built-in construct and the only object that writes
+authored text. It holds either Markdown, its paragraphs and `- |`
+blocks in order, or one fenced `html` block; both, or neither, is an
+error. Slots are applied unless it has `slots=false`. Markdown is
+rendered as the earlier amendment's item 3 describes. It has no child
+objects. Its head, if any, is a label.
+
+**Wrapping.** A `[Content]` whose text holds the unsigiled slot
+`{{ children }}` (at most once) wraps the objects that follow it in the
+same parent: they are reduced and placed there, and are not output after
+it. Without `{{ children }}`, the objects that follow are output after
+it, as usual.
+
+An unsigiled single name now resolves only to `children` (wrapping) or
+to an `Html` or `Markdown` value in scope, such as a fragment the
+consumer binds (a document's head). Placing named children, the "placed
+exactly once" rule, and named Markdown fragments are removed.
+
+### 3. `[Template]` defines a type
+
+````markdown
+# [Template] Navigation link
+- type: nav_link
+- head: url
+- [Url] url
+- [abc] text
+- [abc] title: ?
+- [Content]
+  ```html
+  <a href="{{ [-] this.url }}" title="{{ [abc] this.title }}">{{ [abc] this.text }}</a>
+  ```
+````
+
+- **`type`** (required) is the type name, `[A-Za-z][A-Za-z0-9_-]*`. It
+  defines the tag equal to it compared case-insensitively with `_` and
+  `-` removed: `nav_link`, `nav-link` and `NavLink` all define
+  `[NavLink]`. Two templates for one type, or a type matching a
+  registered construct's tag, is an error. The template's head is a
+  label.
+- **Fields.** A member with a sigil (`- [abc] text`) declares a field of
+  that core type. An object with no children, whose tag is a value type
+  (item 4) or a defined type and whose head is the field's name
+  (`- [Url] url`, `- [Image] cover`), declares a field of that type. A
+  field whose member value is `?` is optional; every other field is
+  required. Field names are unique.
+- **`head: <field>`**: an instance's head fills that field. Without it,
+  the instance's head is bound as `this.name`.
+- **Body.** The template's other children, its `[Content]` and objects,
+  are its body, reduced in order when an instance reduces.
+- **Instances.** An object with the type's tag, anywhere expansion
+  reaches it (`- [NavLink] /about/ text=About`). Its fields come from
+  its inline properties and members; a value is a literal or a slot
+  resolved in the instance's scope. Each value is checked against its
+  field's type: a sigil type as section 3.2 reads members, a value type
+  by its `read` (item 4). A field of a defined type is given as a child
+  object of that type whose head is the field's name
+  (`- [Image] cover src=…`), expanded as an instance in turn. A missing
+  required field, an unknown property or member, or a value of the wrong
+  type is an error naming the instance's path and the field. A slot
+  reading an absent optional field writes nothing.
+- **Scope.** The body is expanded in a scope holding the consumer's root
+  bindings and `this`, a record of the fields (and `name`). It does not
+  see the aliases around the instance (a list's item alias): values reach
+  a type through its fields, as a component's do.
+- **`[Children]`** in a body is where the instance's child objects (other
+  than field objects) go, reduced in the instance's own scope, where the
+  item alias is visible. An instance with children whose type has no
+  `[Children]` is an error; `[Children]` outside a body is an error.
+- A type whose body instantiates itself, directly or through other types,
+  is an error naming the cycle.
+
+### 4. Value types
+
+```rust
+pub trait ValueType {
+    /// The tag that declares a field of this type: "Url".
+    fn name(&self) -> &str;
+    /// Read a field's value (its text, or a slot's value written as text).
+    fn read(&self, text: &str, at: &NodePath) -> Result<Value, String>;
+}
+impl Registry {
+    pub fn register_value_type(&mut self, value_type: Box<dyn ValueType>) -> Option<Box<dyn ValueType>>;
+}
+```
+
+The `html` module provides `Url`, registered by `html::register`:
+
+```rust
+/// Resolves a URL given as a value. A consumer resolves site-relative
+/// URLs and records references here.
+pub trait UrlResolver {
+    fn resolve(&self, url: &str, at: &NodePath) -> Result<String, String>;
+}
+pub struct AsGiven; // impl UrlResolver: the URL unchanged
+```
+
+`Url::read` trims the text, refuses `javascript:`, `data:` and
+`vbscript:` with the same check as `HtmlCollapse`, then calls the
+consumer's `UrlResolver`; the result is `Value::Link`, read in a body as
+`{{ [-] this.url }}`. `AssetUrls` stays for the names in head entries
+(`[Stylesheet] site`).
+
+### 5. Construct scopes
+
+A construct may reduce its children with a named scope of
+registrations. The `html` module registers its head constructs
+(`[Meta]`, `[Title]`, `[Stylesheet]`, `[Script]`, `[Icon]`, `[Link]`)
+in a scope named `head`, and a consumer reduces its head entries with
+`Expander::with_scope("head", …)`. In the default scope these tags are
+not constructs, so a consumer may define its own types with those names
+(a navigation `[Link]`). Defined types, value types, `[List]` and
+`[Content]` are in the default scope.
+
+### 6. Lists (changes section 4.5)
+
+`[Item]` and `[Empty]` are bodies like a template's: their `[Content]`
+and objects are reduced in order. `template=` is removed; an instance
+takes its place:
+
+```markdown
+- [List] gallery source={{ [1.] companion }} item_alias=shot
+  - [Item]
+    - [Phone] src={{ [-] shot.src }} title={{ [abc] shot.title }}
+```
+
+The item alias is bound for the arm's `[Content]` and for slots in the
+properties of instances in it.
+
+### 7. The expanded tree
+
+An instance is a node with its tag and its `this` binding, holding its
+body's reductions. A `[Content]` node holds literal and value parts; a
+wrapping `[Content]` holds the wrapped nodes as a child part at the
+place of `{{ children }}`. `[Children]` is a node holding the instance's
+children. `Display` shows each. `Templates` holds types by normalised
+name; `Expander::template(name)` becomes `Expander::instance(node)`.
+
+### 8. Steps
+
+- Step 2 adds tests for: document order; notes ignored; `[Content]` with
+  Markdown, with `html`, with both and with neither; wrapping, and
+  objects after a non-wrapping `[Content]`; type names matching tags;
+  each kind of field, optional fields, `head:`, and each instance error;
+  a field of a defined type; the body not seeing the caller's alias and
+  `[Children]` seeing it; `[Children]` misused; a cycle; and the
+  structure of an instance in the expanded tree.
+- Step 4 (head constructs) adds `ValueType`, `Url` with `UrlResolver`
+  (each refused scheme, a resolver rewriting a URL and one refusing it),
+  and the `head` scope (`[Link]` a construct inside it and an unknown
+  type outside).
+- Section 5.4's example becomes a `[Template]` of type `phone` with
+  fields `[Url] src` and `[abc] title`, drawn by the `[List]` above.
