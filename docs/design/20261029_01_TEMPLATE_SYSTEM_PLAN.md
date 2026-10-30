@@ -1314,3 +1314,98 @@ name; `Expander::template(name)` becomes `Expander::instance(node)`.
   type outside).
 - Section 5.4's example becomes a `[Template]` of type `phone` with
   fields `[Url] src` and `[abc] title`, drawn by the `[List]` above.
+
+## Amendment — 2026-10-29 22:37 EDT: definitions as objects with types as values; `- |` under `[Content]`; libtypedmd 0.2.0 for steps 1 to 3
+
+Agreed with the owner on 2026-10-29. Where this amendment and the text
+above disagree, this amendment wins. It replaces, in the amendment
+"reduction in document order, `[Content]`, defined types and value
+types": item 3's bullets on `type`, fields and `head:`, and the example
+above them; and item 6's example. None of it changes libtypedmd: every
+form below parses in strict mode with libtypedmd 0.2.0.
+
+### 1. A definition is an object whose values are types
+
+A definition and an instance are the same object format, read two ways:
+in a definition a member's right-hand side is a type, in an instance a
+value (SPEC.md §1 leaves this reading to the consumer; §9's
+`# [Record] User` is such a definition).
+
+````markdown
+# [Template] StoryCard
+- name: Url
+- [abc] text
+- title?: String
+- cover?: Image
+- [Content]
+  [{{ [abc] this.text }}]({{ [-] this.name }})
+
+- [StoryCard] /stories/a/ text=Hello
+  - cover:
+    - src: /images/a.png
+    - alt: A photo
+````
+
+- **The type is the template's head.** `# [Template] StoryCard` defines
+  `[StoryCard]`, matched case-insensitively without `_` and `-` (as
+  before). The head must be a name, `[A-Za-z][A-Za-z0-9_-]*`, and may not
+  be a built-in tag (`Content`, `Children`, `List`, `Item`, `Empty`,
+  `Head`). There is no `type:` member and no separate label; a
+  description is a note in the section's prose.
+- **Every member is a field.** Its type is its sigil (`- [abc] text`,
+  with no right-hand side), or the type named on its right-hand side
+  (`- name: Url`, `- cover: Image`). The core types are named
+  `String`, `Number`, `List`, `Link`, `Date`, `Boolean` and `Currency`,
+  as in SPEC.md §2's table. A named type is a core type, a value type
+  (`Url`) or a defined type; anything else is an error.
+- **Optional is a trailing `?` on the field's name**, as in TypeScript:
+  `- title?: String`, `- [abc] subtitle?`. The field's name is the text
+  without it. An instance may leave an optional field out; a slot reading
+  an absent field writes nothing.
+- **`name` is the head's field.** An instance's head is the field `name`.
+  Declaring `- name: Url` types it (so `[StoryCard] /stories/a/` is
+  checked as a URL); undeclared, it is an optional `String`. This
+  replaces `head:`.
+- **Every object is the body,** reduced in order when an instance
+  reduces: its `[Content]`, `[Children]` and other instances.
+- **Instances** are checked positionally: each member or inline property
+  against the definition's member of the same name. A field of a defined
+  type is set by a member with child rows, a nested property set
+  (`- cover:` with `- src:` and `- alt:` under it), read as an instance
+  of that type without a tag.
+- **Refused, each with a hint:**
+  - a `type:` or `head:` member, which would be fields (the type is the
+    head; the head's field is `name`);
+  - `Type?` on a right-hand side (write `name?: Type`);
+  - a tag ending in `?`, such as `[abc?]` (write `- [abc] name?`);
+  - a sigil member with a value in a definition, such as
+    `- [abc] text: Hi` (a definition declares types);
+  - a value type written as an object, such as `- [Url] url` (write
+    `- url: Url`);
+  - a slot on a definition's right-hand side.
+
+### 2. `[Content]` holds `- |` blocks, and refuses `- [Content] |`
+
+`[Content]` holds paragraphs and `- |` blocks, or one `html` block, and no
+objects. typedmd's literal blocks are `- |` and `- name: |`; on a tagged
+row such as `- [Content] |` the `|` becomes the head and the lines under
+it are read as rows, so that spelling is refused with a hint to put
+`- |` on its own row under the `[Content]`. A literal block on tagged
+rows would be a libtypedmd change (a minor version), left for later.
+
+### 3. libtypedmd 0.2.0 until slots in `[Content]` text
+
+Steps 1 to 3 build on libtypedmd 0.2.0, pinned by `rev` to the commit
+tagged `v0.2.0`: values and records, definitions and instances, and
+expansion need only the graph, and slots in members and inline
+properties are already parsed by 0.2.0. The dependency moves to the
+commit tagged `v0.2.1` in the commit that first replaces slots in
+`[Content]` text, which needs `libtypedmd::slots::parse_text`. Section
+6's "Waits for libtypedmd's `v0.2.1` tag" on step 1 is replaced by this.
+
+### 4. Steps
+
+Step 2's tests on types use this item's forms: each kind of field type,
+optional fields by `?`, `name` typed and untyped, nested property sets
+for defined types, each refusal and its hint, `- |` under `[Content]`
+and `- [Content] |` refused.
