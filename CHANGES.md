@@ -180,3 +180,11 @@ Plan: [The template system](docs/design/20261029_01_TEMPLATE_SYSTEM_PLAN.md)
   resolver's error) is `BadValue` naming the field; a value type written
   as an object is `UnknownType` with the hint `- name: Url`.
 - **`html` is a folder module** (`src/html/mod.rs`, `src/html/head.rs`).
+
+## 2026-10-29 23:08 EDT — the template system plan: the licence
+
+Plan: [The template system](docs/design/20261029_01_TEMPLATE_SYSTEM_PLAN.md)
+(In implementation). Section 7's question 1 is settled by the owner
+(2026-10-29): MIT OR Apache-2.0, as libtypedmd, with `LICENSE-MIT` and
+`LICENSE-APACHE` at the root and `license` in `Cargo.toml` before
+0.1.0.
