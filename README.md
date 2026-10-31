@@ -20,7 +20,7 @@ From git, by tag:
 
 ```toml
 [dependencies]
-libtypedtmpl = { git = "https://github.com/tmzt/libtypedtmpl", tag = "v0.1.1" }
+libtypedtmpl = { git = "https://github.com/tmzt/libtypedtmpl", tag = "v0.2.0" }
 libtypedmd = { git = "https://github.com/tmzt/libtypedmd", rev = "a61c091e6420a1dfc40e89b8600cd26e628e5f7a" }
 ```
 
