@@ -99,10 +99,64 @@ fn consumer_sources() {
     assert_eq!(e.slot.as_deref(), Some("{{ [1.] oldest 2 }}"));
 }
 
+const VALUE: &str =
+    "  - [Item]\n    - [Content]\n      ```html\n      <b>{{ [abc] shot }}</b>\n      ```\n";
+
+const COVERS: &str = "# [Story] a\n- [-] cover: /a/cover.png\n\n# [Story] b\n- [abc] title: B\n\n";
+
+fn cover(story: &str) -> String {
+    format!(
+        "{COVERS}# [Section] s\n- [List] c source={{{{ [1.] {story}.cover }}}} item_alias=c\n{}{}",
+        "  - [Item]\n    - [Content]\n      ```html\n      <img src=\"{{ [-] c }}\">\n      ```\n",
+        EMPTY
+    )
+}
+
+fn stories(source: &str) -> Result<libtypedtmpl::Expanded, libtypedtmpl::Error> {
+    expand_with(
+        source,
+        "Section",
+        "s",
+        &[("Story", "a"), ("Story", "b")],
+        &NoSources,
+    )
+}
+
 #[test]
-fn a_source_that_is_not_a_list() {
-    let e = expand_with(&list(ITEM, "site.title"), "Section", "s", &[], &NoSources).unwrap_err();
-    assert_eq!(e.kind, ErrorKind::NotAList);
+fn a_single_value_is_drawn_once_bound_as_it_is() {
+    let tree = expand_with(&list(VALUE, "site.title"), "Section", "s", &[], &NoSources).unwrap();
+    assert_eq!(tree.count("Item"), 1);
+    assert_eq!(text(&tree), "<b>Example</b>");
+    let tree = stories(&cover("a")).unwrap();
+    assert_eq!(text(&tree), r#"<img src="/a/cover.png">"#);
+    let list = tree.children().next().unwrap();
+    let item = list.children().next().unwrap();
+    assert!(matches!(&item.bindings[0], (alias, Value::Link(_)) if alias == "c"));
+}
+
+#[test]
+fn a_missing_last_field_draws_empty() {
+    let tree = stories(&cover("b")).unwrap();
+    assert_eq!(tree.count("Item"), 0);
+    assert_eq!(text(&tree), "<p>No shots.</p>");
+    let without_empty = cover("b").replace(EMPTY, "");
+    assert_eq!(text(&stories(&without_empty).unwrap()), "");
+}
+
+#[test]
+fn a_missing_alias_or_middle_field_is_still_an_error() {
+    let e = stories(&cover("nobody")).unwrap_err();
+    assert_eq!(e.kind, ErrorKind::UnknownSource, "{e}");
+    let e = stories(&cover("a.meta")).unwrap_err();
+    assert_eq!(e.kind, ErrorKind::UnknownField, "{e}");
+    assert!(e.message.contains("`a` has no field `meta`"), "{e}");
+    let e = stories(&cover("a.cover")).unwrap_err();
+    assert_eq!(e.kind, ErrorKind::NotARecord, "{e}");
+    assert!(
+        e.message
+            .contains("`a.cover` is a link, which has no field `cover`"),
+        "{e}"
+    );
 }
 
 #[test]

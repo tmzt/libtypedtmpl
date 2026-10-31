@@ -149,3 +149,13 @@ fn an_html_field_takes_trusted_html_only() {
     let e = with_shot("one", "- [Story] s body=<p>x</p>\n").unwrap_err();
     assert!(e.message.contains("a literal is not trusted"), "{e}");
 }
+
+#[test]
+#[cfg(feature = "markdown")]
+fn an_html_field_takes_markdown_kept_as_markdown() {
+    let out = text(&with_shot("many", "- [Story] s body={{ shot.details }}\n").unwrap());
+    assert_eq!(
+        out,
+        "<article><p>First <em>line</em>.</p>\n<p>Second.</p>\n</article>"
+    );
+}

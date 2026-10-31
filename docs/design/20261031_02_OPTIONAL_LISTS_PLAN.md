@@ -1,7 +1,7 @@
 ---
 title: "Optional values in `[List]`, and `Markdown` into `Html` fields, released as 0.3.0"
 date: 2026-10-31
-status: Draft
+status: In implementation
 covers:
   - "A `[List]` source naming a missing last field draws no items (its
     `[Empty]`), and one naming a single value draws it once, bound by
@@ -107,3 +107,9 @@ feature, with those tests.
 README's usage example naming it; `main` and the tag pushed to GitHub.
 
 **Done when:** the tag is on GitHub and a crate depending on it builds.
+
+## Amendment — 2026-10-31 13:44 EDT: implementation started
+
+The owner agreed this plan (2026-10-31). Implementation starts with
+step 1. From here this document is immutable; it changes only on the
+owner's explicit instruction, and departures go to `CHANGES.md`.

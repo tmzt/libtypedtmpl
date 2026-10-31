@@ -567,32 +567,58 @@ impl<'a> Expander<'a> {
         Ok(Some(value))
     }
 
-    /// A `[List]` source's records: a path to a list (or to a record's
-    /// items) in scope, or an expression the consumer defines.
-    pub fn records(&self, slot: &Slot, scope: &Scope<'_>) -> Result<Vec<Record>, Error> {
+    /// A `[List]` source's items: a path in scope to a list (its records),
+    /// a record (its `items`), or any other value (drawn once); a path
+    /// whose last field is missing gives no items. Otherwise an expression
+    /// the consumer defines.
+    pub fn items(&self, slot: &Slot, scope: &Scope<'_>) -> Result<Vec<Value>, Error> {
         if let Ok(path) = SlotPath::parse(&slot.expr) {
             if let Some(root) = scope.get(&path.alias) {
-                let value = path.lookup(root).map_err(|e| e.in_slot(slot))?;
+                let value = match path.fields.split_last() {
+                    None => root,
+                    Some((last, init)) => {
+                        let parent = SlotPath {
+                            alias: path.alias.clone(),
+                            fields: init.to_vec(),
+                        };
+                        match parent.lookup(root).map_err(|e| e.in_slot(slot))? {
+                            Value::Record(record) => match record.get(last) {
+                                Some(value) => value,
+                                None => return Ok(Vec::new()), // absent: `[Empty]`
+                            },
+                            other => {
+                                return Err(Error::new(
+                                    ErrorKind::NotARecord,
+                                    format!(
+                                        "`{parent}` is {}, which has no field `{last}`",
+                                        other.kind()
+                                    ),
+                                )
+                                .in_slot(slot))
+                            }
+                        }
+                    }
+                };
                 return match value {
-                    Value::List(records) => Ok(records.clone()),
+                    Value::List(records) => {
+                        Ok(records.iter().cloned().map(Value::Record).collect())
+                    }
                     Value::Record(record) => match record.get("items") {
-                        Some(Value::List(records)) => Ok(records.clone()),
+                        Some(Value::List(records)) => {
+                            Ok(records.iter().cloned().map(Value::Record).collect())
+                        }
                         _ => Err(Error::new(
                             ErrorKind::NotAList,
                             format!("`{}` has no items", slot.expr),
                         )
                         .in_slot(slot)),
                     },
-                    other => Err(Error::new(
-                        ErrorKind::NotAList,
-                        format!("`{}` is {}, not a list", slot.expr, other.kind()),
-                    )
-                    .in_slot(slot)),
+                    other => Ok(vec![other.clone()]),
                 };
             }
         }
         match self.sources.list(&slot.expr) {
-            Ok(Some(records)) => Ok(records),
+            Ok(Some(records)) => Ok(records.into_iter().map(Value::Record).collect()),
             Ok(None) => Err(Error::new(
                 ErrorKind::UnknownSource,
                 format!("unknown source `{}`", slot.expr),
@@ -755,7 +781,7 @@ impl<'a> Expander<'a> {
                             .in_slot(slot)),
                         }
                     }
-                    FieldType::Html if !matches!(value, Value::Html(_)) => {
+                    FieldType::Html if !matches!(value, Value::Html(_) | Value::Markdown(_)) => {
                         return Err(mismatch(format!(
                             "the field `{}` is HTML, but `{}` is {}",
                             field.name,

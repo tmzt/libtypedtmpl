@@ -44,8 +44,16 @@ by name, `- title: String`), `Markdown`, `Html`, a value type such as
 field takes Markdown, or plain text read as Markdown, so one line and a
 `- name: |` block render alike: `{{ this.details }}` writes it rendered,
 `{{ [abc] this.details }}` its source as text. An `Html` field takes
-trusted HTML from a slot, such as a rendered body, placed with
-`{{ this.body }}`.
+trusted HTML (or Markdown) from a slot, such as a rendered body, placed
+with `{{ this.body }}`.
+
+A `[List]`'s source is a path in scope (a list, or a record's `items`) or
+an expression your `Sources` answers. A path to any other value draws it
+once, bound by `item_alias` as it is, and a path whose last field is
+missing draws `[Empty]`, so an optional value is drawn only when present:
+`- [List] cover source={{ [1.] story.meta.cover }} item_alias=c`. An
+`Html` field also takes Markdown, which stays Markdown and is rendered
+where it is placed.
 
 `html::register` adds the head constructs (`[Meta]`, `[Title]`,
 `[Stylesheet]`, `[Script]`, `[Icon]`, `[Link]`, in the scope `head`) and
@@ -79,4 +87,4 @@ conditions.
 |---|---|---|---|
 | [The template system: typedmd graphs expanded by registered constructs into an inspectable tree, then collapsed into HTML](docs/design/20261029_01_TEMPLATE_SYSTEM_PLAN.md) | 2026-10-29 | Implemented | Objects reduce in document order; `[Content]` holds Markdown or HTML with typedmd slots, read by the crate itself; `[Template]` defines a type as an object whose values are types, and its instances are checked against it; `[List]` draws `[Item]`/`[Empty]`; head constructs and `Url`; a `Collapse` writing through an `HtmlWriter` is the only place the tree is flattened; implemented as 0.1.0 on libtypedmd 0.2.0. |
 | [`Markdown` and `Html` field types for `[Template]`, released as 0.2.0](docs/design/20261031_01_MARKDOWN_HTML_FIELDS_PLAN.md) | 2026-10-31 | Implemented | A template may declare `Markdown` and `Html` fields; a `Markdown` field reads plain text as Markdown, since libtypedmd cannot tell a one-line `|` block from a plain value; a minor release because `FieldType` gains variants; implemented as 0.2.0. |
-| [Optional values in `[List]`, and `Markdown` into `Html` fields, released as 0.3.0](docs/design/20261031_02_OPTIONAL_LISTS_PLAN.md) | 2026-10-31 | Draft | A `[List]` over a missing last field draws `[Empty]`, and over a single value draws it once, so sites draw optional keys without conditionals; an `Html` field takes Markdown, rendered where placed; 0.3.0 because `Expander::records` becomes `items`; Draft, for the owner to review. |
+| [Optional values in `[List]`, and `Markdown` into `Html` fields, released as 0.3.0](docs/design/20261031_02_OPTIONAL_LISTS_PLAN.md) | 2026-10-31 | In implementation | A `[List]` over a missing last field draws `[Empty]`, and over a single value draws it once, so sites draw optional keys without conditionals; an `Html` field takes Markdown, rendered where placed; 0.3.0 because `Expander::records` becomes `items`; agreed by the owner, being built. |

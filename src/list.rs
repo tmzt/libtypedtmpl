@@ -8,7 +8,6 @@ use crate::expand::{Construct, Expanded, Expander, Part};
 use crate::path::is_name;
 use crate::scope::Scope;
 use crate::template::tag;
-use crate::value::Value;
 
 pub(crate) struct ListConstruct;
 
@@ -80,20 +79,20 @@ impl Construct for ListConstruct {
         let source = source.ok_or_else(|| shape(cx, "a `[List]` needs `source`".into()))?;
         let alias = alias.ok_or_else(|| shape(cx, "a `[List]` needs `item_alias`".into()))?;
         let item = item.ok_or_else(|| shape(cx, "a `[List]` needs an `[Item]`".into()))?;
-        let records = cx.records(&source, scope)?;
+        let items = cx.items(&source, scope)?;
 
         let mut out = Expanded::new(cx.path(), Some("List"), Some(name.to_string()));
-        if records.is_empty() {
+        if items.is_empty() {
             if let Some(empty) = empty {
                 let arm = cx.within(empty, None, |cx| arm(empty, scope, cx))?;
                 out.parts.push(Part::Child(arm));
             }
         } else {
-            for (i, record) in records.into_iter().enumerate() {
+            for (i, value) in items.into_iter().enumerate() {
                 let mut item_scope = scope.child();
-                item_scope.bind(alias.clone(), Value::Record(record.clone()));
+                item_scope.bind(alias.clone(), value.clone());
                 let mut drawn = cx.within(item, Some(i + 1), |cx| arm(item, &item_scope, cx))?;
-                drawn.bindings.push((alias.clone(), Value::Record(record)));
+                drawn.bindings.push((alias.clone(), value));
                 out.parts.push(Part::Child(drawn));
             }
         }
