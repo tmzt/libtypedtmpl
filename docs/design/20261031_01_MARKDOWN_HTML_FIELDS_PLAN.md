@@ -1,7 +1,7 @@
 ---
 title: "`Markdown` and `Html` field types for `[Template]`, released as 0.2.0"
 date: 2026-10-31
-status: In implementation
+status: Implemented
 covers:
   - "Two field types a `[Template]` may declare: `Markdown` and `Html`,
     what an instance may pass to each, and how the body places them"
@@ -117,3 +117,12 @@ same commit, tagged `v0.2.0`, and the README's usage example naming
 The owner agreed this plan (2026-10-31). Implementation starts with
 step 1. From here this document is immutable; it changes only on the
 owner's explicit instruction, and departures go to `CHANGES.md`.
+
+## Amendment — 2026-10-31 13:02 EDT: implemented
+
+Both steps are done and their **Done when:** holds.
+
+- Step 1, the field types: `1b2ea1c`.
+- Step 2, release 0.2.0: `a39c4c2` (tagged `v0.2.0`) and `edf111d`
+  (the README's usage example), pushed to GitHub; tmplbuild builds on the
+  tag at its commit `05955ed`.
