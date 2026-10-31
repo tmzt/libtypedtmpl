@@ -41,3 +41,18 @@ A fix, with no change to the public API.
   wrapped objects were reduced one by one, so a document shell around a
   `<main>{{ children }}</main>` produced an empty `<main>`. The plan
   already says both; the output now matches it.
+
+## 0.2.0 — 2026-10-31 (`1b2ea1c`, tag `v0.2.0`)
+
+`Markdown` and `Html` field types for `[Template]`
+(`docs/design/20261031_01_MARKDOWN_HTML_FIELDS_PLAN.md`). The commit named
+is the last one before the version commit; the tag is on the version
+commit.
+
+- **Breaking:** `FieldType` (an exhaustive enum) gains the variants
+  `Markdown` and `Html`; a `match` on it needs arms for them.
+- **Added:** a definition may declare `- name: Markdown` and
+  `- name: Html`, optional as `name?:`. A `Markdown` field takes a
+  Markdown value, plain text (read as Markdown) or a literal; an `Html`
+  field takes trusted HTML from a slot. Any other value is an error at the
+  instance.
