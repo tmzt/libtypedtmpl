@@ -196,3 +196,11 @@ Plan: [Markdown and Html field types](docs/design/20261031_01_MARKDOWN_HTML_FIEL
 `[Template]` fields of type `Markdown` and `Html`, with a `Markdown`
 field reading plain text as Markdown, released as 0.2.0. Nothing is built
 until the owner agrees the plan (Rule 2).
+
+## 2026-10-31 13:39 EDT — Optional values in [List], Markdown into Html fields
+
+Plan: [Optional values in `[List]`](docs/design/20261031_02_OPTIONAL_LISTS_PLAN.md)
+(Draft). From the owner's answers to tmplbuild's declared metadata plan:
+a `[List]` draws an optional key once or not at all, and an `Html`
+field takes Markdown, released as 0.3.0. Nothing is built until the
+owner agrees the plan (Rule 2).
