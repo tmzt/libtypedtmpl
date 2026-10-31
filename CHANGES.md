@@ -188,3 +188,11 @@ Plan: [The template system](docs/design/20261029_01_TEMPLATE_SYSTEM_PLAN.md)
 (2026-10-29): MIT OR Apache-2.0, as libtypedmd, with `LICENSE-MIT` and
 `LICENSE-APACHE` at the root and `license` in `Cargo.toml` before
 0.1.0.
+
+## 2026-10-31 12:47 EDT — Markdown and Html field types
+
+Plan: [Markdown and Html field types](docs/design/20261031_01_MARKDOWN_HTML_FIELDS_PLAN.md)
+(Draft). Requested by the tmzt.dev design session on the owner's behalf:
+`[Template]` fields of type `Markdown` and `Html`, with a `Markdown`
+field reading plain text as Markdown, released as 0.2.0. Nothing is built
+until the owner agrees the plan (Rule 2).
