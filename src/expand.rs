@@ -742,6 +742,29 @@ impl<'a> Expander<'a> {
                     FieldType::Core(sigil) => agree(*sigil, &value).map_err(|m| {
                         mismatch(format!("the field `{}`: {m}", field.name)).in_slot(slot)
                     })?,
+                    FieldType::Markdown => {
+                        return match value {
+                            Value::Markdown(_) => Ok(value),
+                            Value::Text(text) => Ok(Value::Markdown(text)),
+                            other => Err(mismatch(format!(
+                                "the field `{}` is Markdown, but `{}` is {}",
+                                field.name,
+                                slot.expr,
+                                other.kind()
+                            ))
+                            .in_slot(slot)),
+                        }
+                    }
+                    FieldType::Html if !matches!(value, Value::Html(_)) => {
+                        return Err(mismatch(format!(
+                            "the field `{}` is HTML, but `{}` is {}",
+                            field.name,
+                            slot.expr,
+                            value.kind()
+                        ))
+                        .in_slot(slot))
+                    }
+                    FieldType::Html => {}
                     FieldType::Named(name) if self.registry.value_type(name).is_some() => {
                         let text = value_text(&value).ok_or_else(|| {
                             mismatch(format!(
@@ -787,6 +810,14 @@ impl<'a> Expander<'a> {
                             format!("the field `{}`: {m}", field.name),
                         )
                     }),
+                    FieldType::Markdown => Ok(Value::Markdown(literal.to_string())),
+                    FieldType::Html => Err(self.error(
+                        ErrorKind::BadValue,
+                        format!(
+                            "the field `{}` is HTML and takes a slot holding trusted HTML; a literal is not trusted",
+                            field.name
+                        ),
+                    )),
                     FieldType::Named(name) if self.templates.get(name).is_some() => Err(self
                         .error(
                             ErrorKind::BadValue,
@@ -892,6 +923,10 @@ impl<'a> Expander<'a> {
                     field.name,
                     sigil.token()
                 ),
+            )),
+            FieldType::Markdown | FieldType::Html => Err(self.error(
+                ErrorKind::BadValue,
+                format!("the field `{}` takes a value, not child rows", field.name),
             )),
         }
     }

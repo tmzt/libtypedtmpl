@@ -58,6 +58,10 @@ pub struct FieldDef {
 pub enum FieldType {
     /// A core type, by sigil or by name.
     Core(Sigil),
+    /// `Markdown`: Markdown source, or plain text read as Markdown.
+    Markdown,
+    /// `Html`: trusted HTML, such as a rendered body.
+    Html,
     /// Any other named type: a value type or another defined type, resolved
     /// when an instance is read.
     Named(String),
@@ -230,6 +234,8 @@ fn field(m: &libtypedmd::Member) -> Result<FieldDef, String> {
             }
             match CORE_TYPES.iter().find(|(n, _)| *n == type_name) {
                 Some((_, sigil)) => FieldType::Core(*sigil),
+                None if type_name == "Markdown" => FieldType::Markdown,
+                None if type_name == "Html" => FieldType::Html,
                 None if is_name(type_name) => FieldType::Named(type_name.to_string()),
                 None => {
                     return Err(format!(

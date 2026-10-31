@@ -1,7 +1,7 @@
 ---
 title: "`Markdown` and `Html` field types for `[Template]`, released as 0.2.0"
 date: 2026-10-31
-status: Draft
+status: In implementation
 covers:
   - "Two field types a `[Template]` may declare: `Markdown` and `Html`,
     what an instance may pass to each, and how the body places them"
@@ -111,3 +111,9 @@ same commit, tagged `v0.2.0`, and the README's usage example naming
 **Done when:** the tag `v0.2.0` is on GitHub, and a crate depending on
 `libtypedtmpl = { git = "https://github.com/tmzt/libtypedtmpl", tag =
 "v0.2.0" }` builds.
+
+## Amendment — 2026-10-31 13:00 EDT: implementation started
+
+The owner agreed this plan (2026-10-31). Implementation starts with
+step 1. From here this document is immutable; it changes only on the
+owner's explicit instruction, and departures go to `CHANGES.md`.
