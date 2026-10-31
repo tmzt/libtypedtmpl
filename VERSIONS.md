@@ -56,3 +56,19 @@ commit.
   Markdown value, plain text (read as Markdown) or a literal; an `Html`
   field takes trusted HTML from a slot. Any other value is an error at the
   instance.
+
+## 0.3.0 — 2026-10-31 (`674ade1`, tag `v0.3.0`)
+
+Optional values in `[List]`, and Markdown into `Html` fields
+(`docs/design/20261031_02_OPTIONAL_LISTS_PLAN.md`). The commit named is
+the last one before the version commit; the tag is on the version commit.
+
+- **Breaking:** `Expander::records` (returning `Vec<Record>`) is replaced
+  by `Expander::items`, returning `Vec<Value>`.
+- **Breaking (behaviour):** a `[List]` source that is a path to a single
+  value (not a list or a record) draws it once, bound by `item_alias` as
+  it is, where 0.2.0 gave `NotAList`; a path whose last field is missing
+  draws no items (`[Empty]`), where 0.2.0 gave `UnknownField`. A missing
+  alias or middle field is still an error.
+- **Added:** an `Html` template field takes a Markdown value, which stays
+  Markdown and is rendered where it is placed.
