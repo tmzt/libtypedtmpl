@@ -162,7 +162,7 @@ pub(crate) fn reduce(
 fn place(
     slot: &Slot,
     scope: &Scope<'_>,
-    cx: &Expander<'_>,
+    cx: &mut Expander<'_>,
     wrapped: &mut Vec<Expanded>,
 ) -> Result<Vec<Part>, Error> {
     if is_children(slot) {
@@ -181,6 +181,13 @@ fn place(
     let Some(value) = cx.resolve(slot, scope)? else {
         return Ok(Vec::new()); // an optional field left out writes nothing
     };
+    if let (None, Value::Record(record)) = (slot.sigil, &value) {
+        if record.type_name().is_some() {
+            return cx
+                .place_record(record, &slot.expr, scope)
+                .map_err(|e| e.in_slot(slot));
+        }
+    }
     let value = match (slot.sigil, value) {
         (Some(_), value) => value,
         (None, value @ Value::Html(_)) => value,
@@ -225,7 +232,7 @@ fn markdown(
     texts: &[&str],
     slots: bool,
     scope: &Scope<'_>,
-    cx: &Expander<'_>,
+    cx: &mut Expander<'_>,
     wrapped: &mut Vec<Expanded>,
 ) -> Result<Vec<Part>, Error> {
     let joined = texts.join("\n\n");

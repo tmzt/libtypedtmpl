@@ -139,6 +139,25 @@ impl SlotPath {
         })
     }
 
+    /// Follow the fields from `root`, as [`lookup`](Self::lookup) does;
+    /// `None` when the walk reaches a field its record marks absent.
+    pub fn lookup_present<'v>(&self, root: &'v Value) -> Result<Option<&'v Value>, Error> {
+        let mut value = root;
+        for (i, field) in self.fields.iter().enumerate() {
+            if let Value::Record(record) = value {
+                if record.get(field).is_none() && record.is_absent(field) {
+                    return Ok(None);
+                }
+            }
+            let step = SlotPath {
+                alias: self.alias.clone(),
+                fields: self.fields[..=i].to_vec(),
+            };
+            value = step.lookup(root)?;
+        }
+        Ok(Some(value))
+    }
+
     /// Follow the fields from `root`, the alias's value.
     pub fn lookup<'v>(&self, root: &'v Value) -> Result<&'v Value, Error> {
         let mut value = root;

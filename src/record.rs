@@ -14,6 +14,10 @@ pub struct Record {
     /// The name as a value, so `get("name")` can answer it.
     name_value: Option<Box<Value>>,
     fields: Vec<(String, Value)>,
+    /// The record's type, such as `ImageRef`, when it has one.
+    type_name: Option<String>,
+    /// Optional fields its producer knows are unset.
+    absent: Vec<String>,
 }
 
 impl Record {
@@ -23,7 +27,33 @@ impl Record {
             name_value: name.clone().map(|n| Box::new(Value::Text(n))),
             name,
             fields: Vec::new(),
+            type_name: None,
+            absent: Vec::new(),
         }
+    }
+
+    /// The record with a type, such as `ImageRef`. Placed in content, a
+    /// typed record is drawn by a template for its type or a renderer
+    /// registered for it.
+    pub fn with_type(mut self, type_name: impl Into<String>) -> Self {
+        self.type_name = Some(type_name.into());
+        self
+    }
+
+    /// The record's type, when it has one.
+    pub fn type_name(&self) -> Option<&str> {
+        self.type_name.as_deref()
+    }
+
+    /// Mark `field` as optional and unset: a slot reaching it resolves to
+    /// nothing instead of failing.
+    pub fn mark_absent(&mut self, field: impl Into<String>) {
+        self.absent.push(field.into());
+    }
+
+    /// Whether `field` is marked absent.
+    pub fn is_absent(&self, field: &str) -> bool {
+        self.absent.iter().any(|f| f == field)
     }
 
     /// The record's name: its object's head.

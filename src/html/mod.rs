@@ -8,8 +8,10 @@
 //! formats dates.
 
 mod head;
+mod image;
 
 pub use head::{head_key, register, AsGiven, AsWritten, AssetKind, AssetUrls, Url, UrlResolver};
+pub use image::ImageRef;
 
 use libtypedmd::{Node, Sigil};
 

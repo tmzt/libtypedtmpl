@@ -12,7 +12,7 @@ use crate::error::{Error, ErrorKind};
 use crate::path::{NodePath, Segment, SlotPath};
 use crate::record::{from_object_at, read_value, Record};
 use crate::scope::Scope;
-use crate::template::{tag, FieldDef, FieldType, Templates, TypeDef};
+use crate::template::{normalise, tag, FieldDef, FieldType, Templates, TypeDef};
 use crate::value::Value;
 
 /// A node of the expanded tree: where it came from, what it bound, and
@@ -257,6 +257,16 @@ pub struct Registry {
     /// Constructs that apply only inside a named scope, such as `head`.
     scoped: HashMap<String, HashMap<String, Box<dyn Construct>>>,
     value_types: HashMap<String, Box<dyn ValueType>>,
+    renderers: HashMap<String, Box<dyn Render>>,
+}
+
+/// How a typed record is drawn when placed in content and no `[Template]`
+/// for its type is defined, such as the built-in `ImageRef`.
+pub trait Render {
+    /// The record type it draws: `ImageRef`.
+    fn type_name(&self) -> &str;
+    /// The parts the record becomes.
+    fn render(&self, record: &Record, cx: &Expander<'_>) -> Result<Vec<Part>, Error>;
 }
 
 /// A type a field may have that is read from text, such as `Url`. It
@@ -301,7 +311,22 @@ impl Registry {
             constructs: HashMap::new(),
             scoped: HashMap::new(),
             value_types: HashMap::new(),
+            renderers: HashMap::new(),
         }
+    }
+
+    /// Register a renderer by `render.type_name()`, returning any it
+    /// replaces.
+    pub fn register_render(&mut self, render: Box<dyn Render>) -> Option<Box<dyn Render>> {
+        self.renderers
+            .insert(crate::template::normalise(render.type_name()), render)
+    }
+
+    /// The renderer for a record type, compared as type names are.
+    pub fn render(&self, type_name: &str) -> Option<&dyn Render> {
+        self.renderers
+            .get(&crate::template::normalise(type_name))
+            .map(|r| r.as_ref())
     }
 
     /// Register by `construct.tag()`, returning any construct it replaces.
@@ -556,10 +581,13 @@ impl<'a> Expander<'a> {
             )
             .in_slot(slot)
         })?;
-        if path.alias == "this" && path.fields.len() == 1 && scope.is_absent(&path.fields[0]) {
+        if path.alias == "this" && !path.fields.is_empty() && scope.is_absent(&path.fields[0]) {
             return Ok(None);
         }
-        let value = path.lookup(root).map_err(in_slot)?.clone();
+        let Some(value) = path.lookup_present(root).map_err(in_slot)? else {
+            return Ok(None); // a field marked absent
+        };
+        let value = value.clone();
         if let Some(sigil) = slot.sigil {
             agree(sigil, &value)
                 .map_err(|m| Error::new(ErrorKind::SigilMismatch, m).in_slot(slot))?;
@@ -574,6 +602,12 @@ impl<'a> Expander<'a> {
     pub fn items(&self, slot: &Slot, scope: &Scope<'_>) -> Result<Vec<Value>, Error> {
         if let Ok(path) = SlotPath::parse(&slot.expr) {
             if let Some(root) = scope.get(&path.alias) {
+                if path.alias == "this"
+                    && !path.fields.is_empty()
+                    && scope.is_absent(&path.fields[0])
+                {
+                    return Ok(Vec::new());
+                }
                 let value = match path.fields.split_last() {
                     None => root,
                     Some((last, init)) => {
@@ -581,7 +615,12 @@ impl<'a> Expander<'a> {
                             alias: path.alias.clone(),
                             fields: init.to_vec(),
                         };
-                        match parent.lookup(root).map_err(|e| e.in_slot(slot))? {
+                        let Some(parent_value) =
+                            parent.lookup_present(root).map_err(|e| e.in_slot(slot))?
+                        else {
+                            return Ok(Vec::new()); // absent on the way: `[Empty]`
+                        };
+                        match parent_value {
                             Value::Record(record) => match record.get(last) {
                                 Some(value) => value,
                                 None => return Ok(Vec::new()), // absent: `[Empty]`
@@ -602,6 +641,9 @@ impl<'a> Expander<'a> {
                 return match value {
                     Value::List(records) => {
                         Ok(records.iter().cloned().map(Value::Record).collect())
+                    }
+                    Value::Record(record) if record.type_name().is_some() => {
+                        Ok(vec![value.clone()])
                     }
                     Value::Record(record) => match record.get("items") {
                         Some(Value::List(records)) => {
@@ -655,9 +697,10 @@ impl<'a> Expander<'a> {
 
         if let Some(field) = def.field("name") {
             if !object.head.is_empty() {
-                let value = self.field_value(field, &object.head, scope)?;
-                this.push("name", value);
-                given.push("name");
+                if let Some(value) = self.field_value(field, &object.head, scope)? {
+                    this.push("name", value);
+                    given.push("name");
+                }
             }
         }
         let mut children = Vec::new();
@@ -672,7 +715,10 @@ impl<'a> Expander<'a> {
                     })?;
                     let value = match &m.rhs {
                         Some(text) if child.nodes.is_empty() => {
-                            self.field_value(field, text, scope)?
+                            match self.field_value(field, text, scope)? {
+                                Some(value) => value,
+                                None => continue, // left out: absent in the body
+                            }
                         }
                         None if !child.nodes.is_empty() => {
                             self.nested_value(field, child, scope)?
@@ -747,8 +793,94 @@ impl<'a> Expander<'a> {
         Ok(out)
     }
 
-    /// A field's value from a literal or one slot.
+    /// The parts a typed record placed in content becomes: drawn by a
+    /// `[Template]` for its type, else by a renderer registered for it.
+    pub(crate) fn place_record(
+        &mut self,
+        record: &Record,
+        expr: &str,
+        scope: &Scope<'_>,
+    ) -> Result<Vec<Part>, Error> {
+        let type_name = record.type_name().expect("called on typed records");
+        if let Some(def) = self.templates.get(type_name) {
+            let def = def.clone();
+            return Ok(vec![Part::Child(
+                self.record_instance(&def, record, scope)?,
+            )]);
+        }
+        if let Some(render) = self.registry.render(type_name) {
+            return render.render(record, self);
+        }
+        Err(self.error(
+            ErrorKind::SigilMismatch,
+            format!(
+                "`{expr}` is a `{type_name}` record; define `[Template] {type_name}` to draw it"
+            ),
+        ))
+    }
+
+    /// A defined type drawn for a record: `this` is the record, its absent
+    /// fields absent, its required fields checked.
+    fn record_instance(
+        &mut self,
+        def: &TypeDef,
+        record: &Record,
+        scope: &Scope<'_>,
+    ) -> Result<Expanded, Error> {
+        if self.types.contains(&def.key) {
+            return Err(self.error(
+                ErrorKind::TemplateCycle,
+                format!("`[{}]` draws a record of its own type", def.name),
+            ));
+        }
+        let mut body_scope = scope.root().child();
+        for field in &def.fields {
+            if record.get(&field.name).is_some() {
+                continue;
+            }
+            if field.optional || field.name == "name" {
+                body_scope.mark_absent(field.name.clone());
+            } else {
+                return Err(self.error(
+                    ErrorKind::MissingField,
+                    format!("`[{}]` needs the field `{}`", def.name, field.name),
+                ));
+            }
+        }
+        body_scope.bind("this", Value::Record(record.clone()));
+        self.types.push(def.key.clone());
+        self.children.push(Vec::new());
+        let body = self.expand_children(&def.node, &body_scope);
+        self.children.pop();
+        self.types.pop();
+        let mut out = Expanded::new(
+            &self.path,
+            Some(&def.name),
+            record.name().map(str::to_string),
+        );
+        out.bindings
+            .push(("this".into(), Value::Record(record.clone())));
+        out.parts = body?.into_iter().map(Part::Child).collect();
+        Ok(out)
+    }
+
+    /// A field's value from a literal or one slot; `None` for an optional
+    /// field whose slot reaches an absent field, which leaves it out.
     fn field_value(
+        &self,
+        field: &FieldDef,
+        text: &Text,
+        scope: &Scope<'_>,
+    ) -> Result<Option<Value>, Error> {
+        if let [TextPart::Slot(slot)] = text.parts() {
+            if field.optional && self.resolve(slot, scope)?.is_none() {
+                return Ok(None);
+            }
+        }
+        self.present_value(field, text, scope).map(Some)
+    }
+
+    fn present_value(
         &self,
         field: &FieldDef,
         text: &Text,
@@ -791,6 +923,9 @@ impl<'a> Expander<'a> {
                         .in_slot(slot))
                     }
                     FieldType::Html => {}
+                    FieldType::Named(name)
+                        if matches!(&value, Value::Record(r)
+                            if r.type_name().is_some_and(|t| normalise(t) == normalise(name))) => {}
                     FieldType::Named(name) if self.registry.value_type(name).is_some() => {
                         let text = value_text(&value).ok_or_else(|| {
                             mismatch(format!(
@@ -917,7 +1052,12 @@ impl<'a> Expander<'a> {
                         )
                     })?;
                     let value = match &m.rhs {
-                        Some(text) if n.nodes.is_empty() => self.field_value(inner, text, scope)?,
+                        Some(text) if n.nodes.is_empty() => {
+                            match self.field_value(inner, text, scope)? {
+                                Some(value) => value,
+                                None => continue,
+                            }
+                        }
                         None if !n.nodes.is_empty() => self.nested_value(inner, n, scope)?,
                         _ => {
                             return Err(self

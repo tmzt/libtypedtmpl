@@ -55,6 +55,15 @@ missing draws `[Empty]`, so an optional value is drawn only when present:
 `Html` field also takes Markdown, which stays Markdown and is rendered
 where it is placed.
 
+A record can carry a type (`Record::with_type("ImageRef")`) and fields
+marked absent (`mark_absent`): optional and unset. A slot reaching an
+absent field writes nothing, an optional template field given one is left
+out, and a `[List]` over one draws `[Empty]`; a field missing and not
+marked absent is still an error. Placed in content, a typed record is
+drawn by a `[Template]` for its type if the site defines one, or else by a
+renderer registered for it (`Render`, `Registry::register_render`).
+`html::register` adds one for `ImageRef`, writing `<img src alt>`.
+
 `html::register` adds the head constructs (`[Meta]`, `[Title]`,
 `[Stylesheet]`, `[Script]`, `[Icon]`, `[Link]`, in the scope `head`) and
 the value type `Url`, with your `AssetUrls` and `UrlResolver`.
@@ -88,4 +97,4 @@ conditions.
 | [The template system: typedmd graphs expanded by registered constructs into an inspectable tree, then collapsed into HTML](docs/design/20261029_01_TEMPLATE_SYSTEM_PLAN.md) | 2026-10-29 | Implemented | Objects reduce in document order; `[Content]` holds Markdown or HTML with typedmd slots, read by the crate itself; `[Template]` defines a type as an object whose values are types, and its instances are checked against it; `[List]` draws `[Item]`/`[Empty]`; head constructs and `Url`; a `Collapse` writing through an `HtmlWriter` is the only place the tree is flattened; implemented as 0.1.0 on libtypedmd 0.2.0. |
 | [`Markdown` and `Html` field types for `[Template]`, released as 0.2.0](docs/design/20261031_01_MARKDOWN_HTML_FIELDS_PLAN.md) | 2026-10-31 | Implemented | A template may declare `Markdown` and `Html` fields; a `Markdown` field reads plain text as Markdown, since libtypedmd cannot tell a one-line `|` block from a plain value; a minor release because `FieldType` gains variants; implemented as 0.2.0. |
 | [Optional values in `[List]`, and `Markdown` into `Html` fields, released as 0.3.0](docs/design/20261031_02_OPTIONAL_LISTS_PLAN.md) | 2026-10-31 | In implementation | A `[List]` over a missing last field draws `[Empty]`, and over a single value draws it once, so sites draw optional keys without conditionals; an `Html` field takes Markdown, rendered where placed; 0.3.0 because `Expander::records` becomes `items`; agreed by the owner, being built. |
-| [Typed records that draw themselves, and absent fields, released as 0.4.0](docs/design/20261031_03_TYPED_RECORDS_PLAN.md) | 2026-10-31 | Draft | A record may carry a type (`ImageRef`) and absent fields; a placed typed record draws through a site template for its type or a built-in renderer (`ImageRef` writes `<img>`); absent fields write nothing; agreed by the owner. |
+| [Typed records that draw themselves, and absent fields, released as 0.4.0](docs/design/20261031_03_TYPED_RECORDS_PLAN.md) | 2026-10-31 | In implementation | A record may carry a type (`ImageRef`) and absent fields; a placed typed record draws through a site template for its type or a built-in renderer (`ImageRef` writes `<img>`); absent fields write nothing; agreed by the owner, being built. |

@@ -103,6 +103,7 @@ impl crate::expand::ValueType for Url {
 /// `Url`.
 pub fn register(registry: &mut Registry, assets: Rc<dyn AssetUrls>, urls: Rc<dyn UrlResolver>) {
     registry.register_value_type(Box::new(Url::new(urls)));
+    registry.register_render(Box::new(super::image::ImageRef));
     registry.register_in("head", Box::new(Meta));
     registry.register_in("head", Box::new(Title));
     for (tag, kind) in [
