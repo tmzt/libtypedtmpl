@@ -204,3 +204,11 @@ Plan: [Optional values in `[List]`](docs/design/20261031_02_OPTIONAL_LISTS_PLAN.
 a `[List]` draws an optional key once or not at all, and an `Html`
 field takes Markdown, released as 0.3.0. Nothing is built until the
 owner agrees the plan (Rule 2).
+
+## 2026-10-31 23:59 EDT — Typed records and absent fields
+
+Plan: [Typed records](docs/design/20261031_03_TYPED_RECORDS_PLAN.md)
+(Draft, agreed by the owner 2026-10-31). From tmplbuild's declared
+metadata plan: records with a type that draw themselves (a built-in
+`ImageRef` renderer, or a site template for the type), and absent fields
+that write nothing, released as 0.4.0.
