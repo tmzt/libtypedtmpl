@@ -72,3 +72,23 @@ the last one before the version commit; the tag is on the version commit.
   alias or middle field is still an error.
 - **Added:** an `Html` template field takes a Markdown value, which stays
   Markdown and is rendered where it is placed.
+
+## 0.4.0 — 2026-11-01 (`20be3b5`, tag `v0.4.0`)
+
+Typed records that draw themselves, and absent fields
+(`docs/design/20261031_03_TYPED_RECORDS_PLAN.md`). The commit named is the
+last one before the version commit; the tag is on the version commit.
+
+- **Added:** `Record::with_type`, `Record::type_name`,
+  `Record::mark_absent`, `Record::is_absent`; `SlotPath::lookup_present`;
+  the trait `Render` with `Registry::register_render` and
+  `Registry::render`; `html::ImageRef`, registered by `html::register`,
+  writing `<img src alt>`.
+- **Breaking (behaviour):** a typed record placed in content with no
+  sigil is drawn by a `[Template]` for its type or a registered renderer,
+  where 0.3.0 gave `SigilMismatch`; a slot reaching a field marked absent
+  resolves to nothing (writes nothing; an optional template field is left
+  out; a `[List]` draws `[Empty]`), where 0.3.0 gave `UnknownField`; a
+  typed record as a `[List]` source draws once, where 0.3.0 drew its
+  `items`; a template field whose type names a record type accepts a
+  record of that type without a template or value type of that name.
