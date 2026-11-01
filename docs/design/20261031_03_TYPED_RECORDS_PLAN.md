@@ -1,7 +1,7 @@
 ---
 title: "Typed records that draw themselves, and absent fields, released as 0.4.0"
 date: 2026-10-31
-status: In implementation
+status: Implemented
 covers:
   - "A record may carry a type name (`ImageRef`) and a list of absent
     fields"
@@ -120,3 +120,11 @@ README's usage example naming it; `main` and the tag pushed to GitHub.
 The owner agreed this plan (2026-10-31). Implementation starts with
 step 1. From here this document is immutable; it changes only on the
 owner's explicit instruction, and departures go to `CHANGES.md`.
+
+## Amendment — 2026-11-01 00:03 EDT: implemented
+
+Both steps are done and their **Done when:** holds.
+
+- Step 1: `20be3b5`.
+- Step 2: `ee834fb` (tagged `v0.4.0`) and `2a2bb31` (the README's
+  usage example), pushed to GitHub; a crate depending on the tag builds.
